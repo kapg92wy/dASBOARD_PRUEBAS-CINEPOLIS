@@ -22,9 +22,8 @@ function prioBadge(p) {
     ? '<span class="badge br">🔴 Urgente</span>'
     : '<span class="badge bw">Normal</span>';
 }
-// ── Etapas del flujo SLA ─────────────────────────
-// Día 1 → 4 → 10 → 14 → cierre (según tabla de negocio)
-const SLA_ETAPAS = [
+// ── Etapas del flujo SLA (cambian según el tipo de resolución) ──
+const SLA_ETAPAS_REPARACION = [
   { key: 'Abierta',          label: 'Ticket recibido',  dias: 1  },
   { key: 'En diagnóstico',   label: 'En diagnóstico',   dias: 4  },
   { key: 'En logística',     label: 'Logística',        dias: 10 },
@@ -32,10 +31,26 @@ const SLA_ETAPAS = [
   { key: 'Resuelta',         label: 'Finalizado',       dias: null },
 ];
 
-function estadoToEtapa(estado) {
-  const idx = SLA_ETAPAS.findIndex(e => e.key === estado);
+// Retiro: tras el diagnóstico se quita la máquina y se instala un reemplazo.
+// "Finalizado" = la máquina nueva ya quedó funcionando en el lugar.
+const SLA_ETAPAS_RETIRO = [
+  { key: 'Abierta',        label: 'Ticket recibido',    dias: 1  },
+  { key: 'En diagnóstico', label: 'En diagnóstico',     dias: 4  },
+  { key: 'Retirada',       label: 'Retirada',           dias: 7  },
+  { key: 'Reemplazo',      label: 'Reemplazo en sitio', dias: 14 },
+  { key: 'Resuelta',       label: 'Finalizado',         dias: null },
+];
+
+// Devuelve el set de etapas correcto según el tipo de resolución
+function etapasDe(tipo_resolucion) {
+  return tipo_resolucion === 'Retiro' ? SLA_ETAPAS_RETIRO : SLA_ETAPAS_REPARACION;
+}
+
+function estadoToEtapa(estado, tipo_resolucion) {
+  const etapas = etapasDe(tipo_resolucion);
+  const idx = etapas.findIndex(e => e.key === estado);
   if (idx >= 0) return idx;
-  if (estado === 'Cerrada')    return 4;
+  if (estado === 'Cerrada')    return etapas.length - 1;
   if (estado === 'En proceso') return 1;   // compat. registros viejos
   return 0;
 }
@@ -46,6 +61,8 @@ function estadoBadge(e) {
     'En diagnóstico':   '<span class="badge bo">En diagnóstico</span>',
     'En logística':     '<span class="badge bp">Logística</span>',
     'Atención técnico': '<span class="badge bc">Atención técnico</span>',
+    'Retirada':         '<span class="badge bo">Retirada</span>',
+    'Reemplazo':        '<span class="badge bc">Reemplazo en sitio</span>',
     'Resuelta':         '<span class="badge bg">Finalizado</span>',
     'Cerrada':          '<span class="badge bg">✅ Cerrado</span>',
     'En proceso':       '<span class="badge bo">En diagnóstico</span>',  // compat
@@ -64,10 +81,11 @@ function resolucionBadge(tipo) {
 // ── Barra de progreso SLA ─────────────────────────
 // showDias = true solo para mantenimiento/admin/técnico (el cine no ve los días)
 function slaProgressBar(estado, tipo_resolucion, showDias) {
-  const etapaActual = estadoToEtapa(estado);
+  const etapas      = etapasDe(tipo_resolucion);
+  const etapaActual = estadoToEtapa(estado, tipo_resolucion);
   const cerrada     = estado === 'Cerrada';
 
-  const steps = SLA_ETAPAS.map((e, i) => {
+  const steps = etapas.map((e, i) => {
     const done   = cerrada || i < etapaActual;
     const active = !cerrada && i === etapaActual;
 
@@ -79,7 +97,7 @@ function slaProgressBar(estado, tipo_resolucion, showDias) {
     const dotTxt    = (done || active) ? '#060a12' : 'var(--text3)';
     const check     = done ? '✓' : (i + 1);
 
-    const linea = (i < SLA_ETAPAS.length - 1)
+    const linea = (i < etapas.length - 1)
       ? `<div style="position:absolute;top:11px;left:50%;width:100%;height:2px;background:${lineColor};z-index:0;"></div>`
       : '';
     const dias = (showDias && e.dias != null)
