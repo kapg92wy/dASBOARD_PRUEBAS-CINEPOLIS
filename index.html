@@ -14,7 +14,7 @@
 
   <!-- ── PWA (instalable) ────────────────────────── -->
   <link rel="manifest" href="manifest.json">
-  <meta name="theme-color" content="#060a12">
+  <meta name="theme-color" content="#0c1a3a">
   <link rel="apple-touch-icon" href="icon-192.png">
   <meta name="apple-mobile-web-app-capable" content="yes">
   <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
@@ -25,7 +25,7 @@
   <div id="loginScreen" style="min-height:100vh;display:flex;align-items:center;justify-content:center;background:var(--bg);">
     <div class="login-box">
       <div class="login-logo">
-        <div class="login-logo-icon">CP</div>
+        <img class="login-logo-icon" src="logo.png" alt="Galex">
         <div>
           <div class="login-title">CENTRO DE SERVICIO</div>
           <div class="login-sub">Cinépolis · Sistema Sincronizado</div>
@@ -37,13 +37,14 @@
       <input class="login-input" id="loginPass" type="password" placeholder="••••••••">
       <button class="login-btn" id="loginBtn">INGRESAR</button>
       <div class="login-err" id="loginErr"></div>
+      <div style="text-align:center;margin-top:20px;padding-top:16px;border-top:1px solid var(--border);font-size:11px;color:var(--text3);letter-spacing:.3px;">Galex 2026 · Todos los derechos reservados</div>
     </div>
   </div>
 
   <div id="app" style="display:none;">
     <header class="header">
       <div style="display:flex;align-items:center;">
-        <div class="hlogo">CP</div>
+        <img class="hlogo" src="logo.png" alt="Galex">
         <div>
           <div class="htitle" id="headerTitle">CENTRO DE SERVICIO</div>
           <div class="hsub" id="headerSub">Gestión en la Nube</div>
@@ -59,6 +60,7 @@
     </header>
     <nav class="nav" id="mainNav"></nav>
     <div class="main" id="mainContent"></div>
+    <footer style="text-align:center;padding:18px 16px;font-size:11px;color:var(--text3);border-top:1px solid var(--border);letter-spacing:.3px;">Galex 2026 · Todos los derechos reservados</footer>
   </div>
 
   <div class="modal-bg" id="modalBg">
