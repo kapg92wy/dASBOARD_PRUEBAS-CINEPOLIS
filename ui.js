@@ -122,6 +122,11 @@ function loadingHTML(msg) {
   return `<div class="loading-wrap"><div class="spinner"></div><div style="font-size:12px;color:var(--text2);">${msg || 'Cargando...'}</div></div>`;
 }
 
+// Spinner DENTRO de una tabla (fila válida, para que no se quede huérfano)
+function loadingRow(cols, msg) {
+  return `<tr><td colspan="${cols || 1}" style="padding:0;border:none;background:transparent;">${loadingHTML(msg)}</td></tr>`;
+}
+
 // ── Toast notifications ───────────────────────────
 function showToast(msg, type = 'info') {
   const icons = { success: '✅', error: '❌', info: 'ℹ️' };
