@@ -248,7 +248,7 @@ async function renderLista(container) {
   container.innerHTML =
     '<div style="background:rgba(6,182,212,.07);border:1px solid rgba(6,182,212,.2);border-radius:8px;padding:10px 16px;margin-bottom:14px;font-size:12px;color:var(--cyan);">📋 Mostrando solo las incidencias que tú has reportado</div>'
     + '<div class="filters">'
-    + '<span class="flabel">Estado</span><select id="fEstado" onchange="filtrarLista()"><option value="">Todos</option><option>Abierta</option><option>En diagnóstico</option><option>En logística</option><option>Atención técnico</option><option>Resuelta</option><option>Cerrada</option></select>'
+    + '<span class="flabel">Estado</span><select id="fEstado" onchange="filtrarLista()"><option value="">Todos</option><option>Abierta</option><option>En diagnóstico</option><option>En logística</option><option>Atención técnico</option><option>Retirada</option><option value="Reemplazo">Reemplazo en sitio</option><option>Resuelta</option><option>Cerrada</option></select>'
     + '<span class="flabel">Tipo</span><select id="fTipoF" onchange="filtrarLista()"><option value="">Todos</option><option>OPERANDO PARCIALMENTE</option><option>FUERA DE SERVICIO</option><option>IMAGEN / ESTÉTICA</option><option>MONEDERO / COBRO</option><option>PANTALLA / DISPLAY</option><option>VENTA CERO</option><option>OTRO</option></select>'
     + '<span class="flabel">Prioridad</span><select id="fPrioF" onchange="filtrarLista()"><option value="">Todas</option><option>Urgente</option><option>Normal</option></select>'
     + '<input type="text" id="fBuscar" placeholder="Buscar serie, ID..." oninput="filtrarLista()">'
@@ -322,7 +322,7 @@ async function renderMisAsignadas(container) {
     + '</div>'
     + '<div class="section-header">INCIDENCIAS ASIGNADAS A MÍ</div>'
     + '<div class="filters">'
-    + '<span class="flabel">Estado</span><select id="faEstado" onchange="filtrarMisAsignadas()"><option value="">Todos</option><option>Abierta</option><option>En diagnóstico</option><option>En logística</option><option>Atención técnico</option><option>Resuelta</option><option>Cerrada</option></select>'
+    + '<span class="flabel">Estado</span><select id="faEstado" onchange="filtrarMisAsignadas()"><option value="">Todos</option><option>Abierta</option><option>En diagnóstico</option><option>En logística</option><option>Atención técnico</option><option>Retirada</option><option value="Reemplazo">Reemplazo en sitio</option><option>Resuelta</option><option>Cerrada</option></select>'
     + '<input type="text" id="faBuscar" placeholder="Buscar cine, serie, ID..." oninput="filtrarMisAsignadas()">'
     + '<button onclick="recargarMisAsignadas()" class="btn-ghost" style="padding:5px 12px;font-size:11px;">🔄 Actualizar</button>'
     + '<span class="rcount" id="asigCount"></span></div>'
@@ -384,7 +384,7 @@ async function renderIncidenciasCines(container) {
   container.innerHTML =
     '<div class="section-header">INCIDENCIAS REPORTADAS POR LOS CINES</div>'
     + '<div class="filters">'
-    + '<span class="flabel">Estado</span><select id="fcEstado" onchange="filtrarCines()"><option value="">Todos</option><option>Abierta</option><option>En diagnóstico</option><option>En logística</option><option>Atención técnico</option><option>Resuelta</option><option>Cerrada</option></select>'
+    + '<span class="flabel">Estado</span><select id="fcEstado" onchange="filtrarCines()"><option value="">Todos</option><option>Abierta</option><option>En diagnóstico</option><option>En logística</option><option>Atención técnico</option><option>Retirada</option><option value="Reemplazo">Reemplazo en sitio</option><option>Resuelta</option><option>Cerrada</option></select>'
     + '<span class="flabel">Prioridad</span><select id="fcPrio" onchange="filtrarCines()"><option value="">Todas</option><option>Urgente</option><option>Normal</option></select>'
     + '<input type="text" id="fcBuscar" placeholder="Buscar cine, serie, ID..." oninput="filtrarCines()">'
     + '<button onclick="limpiarFiltrosCines()" class="btn-ghost" style="padding:5px 12px;font-size:11px;">Limpiar</button>'
@@ -524,11 +524,13 @@ async function openModal(id) {
     const fotoCierre = r.foto_url_cierre || '';
     
     const showDias = currentUser.rol !== 'cinepolis';
-    const estadoActual = ['Abierta','En diagnóstico','En logística','Atención técnico','Resuelta'].includes(r.estado)
+    const _etapasR = etapasDe(r.tipo_resolucion);
+    const _keys    = _etapasR.map(e => e.key);
+    const estadoActual = _keys.includes(r.estado)
       ? r.estado
-      : (r.estado === 'En proceso' ? 'En diagnóstico' : r.estado);
-    const statusOpts = ['Abierta','En diagnóstico','En logística','Atención técnico','Resuelta']
-      .map(s => `<option value="${s}" ${estadoActual===s?'selected':''}>${s}</option>`).join('');
+      : (r.estado === 'En proceso' ? 'En diagnóstico' : (_keys[0]));
+    const statusOpts = _etapasR
+      .map(e => `<option value="${e.key}" ${estadoActual===e.key?'selected':''}>${e.label}</option>`).join('');
 
     document.getElementById('modalContent').innerHTML = `
       <div class="detail-row"><span class="detail-key">ID</span><span class="detail-val" style="font-family:var(--ff);color:var(--gold);font-weight:700;">${r.id}</span></div>
@@ -539,7 +541,7 @@ async function openModal(id) {
       
       <div class="detail-row"><span class="detail-key">Prioridad</span><span class="detail-val">${prioBadge(r.prioridad)}</span></div>
       <div class="detail-row"><span class="detail-key">Estado Actual</span><span class="detail-val">${estadoBadge(r.estado)}</span></div>
-      <div style="margin:6px 0 14px;">${slaProgressBar(r.estado, r.tipo_resolucion, showDias)}</div>
+      <div id="slaBarBox" style="margin:6px 0 14px;">${slaProgressBar(r.estado, r.tipo_resolucion, showDias)}</div>
       ${['mantenimiento','admin'].includes(currentUser.rol) ? (ventaInfo ? `
         <div style="background:rgba(34,197,94,.06);border:1px solid rgba(34,197,94,.25);border-radius:8px;padding:12px 14px;margin:0 0 14px;display:flex;gap:18px;flex-wrap:wrap;align-items:center;">
           <div>
@@ -572,9 +574,9 @@ async function openModal(id) {
             ${statusOpts}
           </select>
 
-          <div id="cajaTipoRes" style="display:${estadoToEtapa(r.estado)>=2?'block':'none'}; margin-top:12px;">
+          <div id="cajaTipoRes" style="display:${estadoToEtapa(r.estado, r.tipo_resolucion)>=1?'block':'none'}; margin-top:12px;">
             <label class="form-label" style="color:var(--gold);">Tipo de resolución</label>
-            <select class="status-select" id="modalTipoRes">
+            <select class="status-select" id="modalTipoRes" onchange="onTipoResChange()">
               <option value="">— Selecciona —</option>
               <option value="Reparación" ${r.tipo_resolucion==='Reparación'?'selected':''}>🔧 Reparación</option>
               <option value="Retiro"     ${r.tipo_resolucion==='Retiro'?'selected':''}>🔄 Retiro</option>
@@ -618,11 +620,41 @@ async function openModal(id) {
 
 function onEstadoModalChange() {
   const v = document.getElementById('modalStatus').value;
-  const etapa = (typeof estadoToEtapa === 'function') ? estadoToEtapa(v) : 0;
+  const tipo = document.getElementById('modalTipoRes')?.value || '';
+  const etapa = (typeof estadoToEtapa === 'function') ? estadoToEtapa(v, tipo) : 0;
   const caja = document.getElementById('cajaFoto');
   if (caja) caja.style.display = (v === 'Resuelta') ? 'block' : 'none';
   const cajaTR = document.getElementById('cajaTipoRes');
-  if (cajaTR) cajaTR.style.display = (etapa >= 2) ? 'block' : 'none';
+  if (cajaTR) cajaTR.style.display = (etapa >= 1) ? 'block' : 'none';
+  refreshModalSLA();
+}
+
+// Al cambiar Reparación/Retiro: reconstruye las etapas del desplegable y la barra
+function onTipoResChange() {
+  rebuildEstadoOptions();
+  refreshModalSLA();
+}
+
+function rebuildEstadoOptions() {
+  const sel = document.getElementById('modalStatus');
+  if (!sel || typeof etapasDe !== 'function') return;
+  const tipo   = document.getElementById('modalTipoRes')?.value || '';
+  const etapas = etapasDe(tipo);
+  const curVal = sel.value;
+  const curIdx = sel.selectedIndex >= 0 ? sel.selectedIndex : 0;
+  sel.innerHTML = etapas.map(e => `<option value="${e.key}">${e.label}</option>`).join('');
+  // Conservar el avance: por valor si existe, si no por la misma posición
+  const match = etapas.findIndex(e => e.key === curVal);
+  sel.selectedIndex = match >= 0 ? match : Math.min(curIdx, etapas.length - 1);
+}
+
+function refreshModalSLA() {
+  const box = document.getElementById('slaBarBox');
+  if (!box || typeof slaProgressBar !== 'function') return;
+  const estado = document.getElementById('modalStatus')?.value;
+  const tipo   = document.getElementById('modalTipoRes')?.value || '';
+  const showDias = currentUser.rol !== 'cinepolis';
+  box.innerHTML = slaProgressBar(estado, tipo, showDias);
 }
 
 async function saveStatus() {
