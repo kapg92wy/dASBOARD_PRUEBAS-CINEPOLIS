@@ -3,23 +3,24 @@
    ═══════════════════════════════════════════════ */
 
 :root {
-  --bg:#060a12; --bg2:#0a0f1c; --bg3:#0f1525;
-  --panel:#111827; --panel2:#1a2338; --panel3:#1f2a40;
-  --border:rgba(255,255,255,0.06); --border2:rgba(255,255,255,0.12);
-  --gold:#f5c518; --gold2:#e8a800;
+  /* ── Paleta Cinépolis (azul + amarillo) ── */
+  --bg:#0c1a3a; --bg2:#0f1f44; --bg3:#16305e;
+  --panel:#14264e; --panel2:#1b3162; --panel3:#22407a;
+  --border:rgba(255,255,255,0.07); --border2:rgba(255,255,255,0.14);
+  --gold:#f7c400; --gold2:#d9ad00;            /* amarillo Cinépolis (acento) */
   --red:#ef4444; --orange:#f97316; --green:#22c55e;
-  --blue:#3b82f6; --cyan:#06b6d4; --purple:#8b5cf6;
-  --text:#e8eaf0; --text2:#8b95ab; --text3:#4b5671;
+  --blue:#4b6fb3; --cyan:#6aa3e0; --purple:#8b5cf6;  /* azules Cinépolis */
+  --text:#eef2fb; --text2:#9fb0d0; --text3:#5b6f96;
   --ff:'Rajdhani',sans-serif; --fb:'DM Sans',sans-serif;
 }
 *{box-sizing:border-box;margin:0;padding:0;}
 body{background:var(--bg);color:var(--text);font-family:var(--fb);font-size:13px;min-height:100vh;}
 
 /* ── LOGIN ─────────────────────────────────────── */
-#loginScreen{min-height:100vh;display:flex;align-items:center;justify-content:center;background:radial-gradient(ellipse at 50% 0%,rgba(245,197,24,0.08) 0%,transparent 60%),var(--bg);}
+#loginScreen{min-height:100vh;display:flex;align-items:center;justify-content:center;background:radial-gradient(ellipse at 50% 0%,rgba(75,111,179,0.16) 0%,transparent 60%),var(--bg);}
 .login-box{background:var(--panel);border:1px solid var(--border2);border-radius:16px;padding:40px 48px;width:100%;max-width:420px;box-shadow:0 32px 80px rgba(0,0,0,0.5);}
 .login-logo{display:flex;align-items:center;gap:12px;margin-bottom:32px;}
-.login-logo-icon{width:44px;height:44px;background:var(--gold);border-radius:10px;display:flex;align-items:center;justify-content:center;font-family:var(--ff);font-weight:700;font-size:20px;color:#060a12;}
+.login-logo-icon{width:44px;height:44px;background:#fff;border-radius:10px;object-fit:contain;display:block;}
 .login-title{font-family:var(--ff);font-size:22px;font-weight:700;letter-spacing:1.5px;}
 .login-sub{font-size:11px;color:var(--text2);letter-spacing:.5px;}
 .login-label{font-size:11px;color:var(--text2);text-transform:uppercase;letter-spacing:.7px;margin-bottom:6px;display:block;}
@@ -34,14 +35,14 @@ body{background:var(--bg);color:var(--text);font-family:var(--fb);font-size:13px
 
 /* ── APP SHELL ─────────────────────────────────── */
 #app{display:none;}
-.header{background:linear-gradient(135deg,#080d1c,#0a1428,#060a12);border-bottom:2px solid var(--gold);padding:0 24px;display:flex;align-items:center;justify-content:space-between;height:60px;position:sticky;top:0;z-index:100;box-shadow:0 4px 32px rgba(245,197,24,0.08);}
-.hlogo{width:34px;height:34px;background:var(--gold);border-radius:7px;display:flex;align-items:center;justify-content:center;font-family:var(--ff);font-weight:700;font-size:16px;color:#060a12;margin-right:12px;}
+.header{background:linear-gradient(135deg,#0a1a3e,#0d2150,#0c1a3a);border-bottom:2px solid var(--gold);padding:0 24px;display:flex;align-items:center;justify-content:space-between;height:60px;position:sticky;top:0;z-index:100;box-shadow:0 4px 32px rgba(247,196,0,0.08);}
+.hlogo{width:34px;height:34px;background:#fff;border-radius:7px;object-fit:contain;display:block;margin-right:12px;}
 .htitle{font-family:var(--ff);font-size:19px;font-weight:700;letter-spacing:2px;}
 .hsub{font-size:10px;color:var(--text2);letter-spacing:.8px;text-transform:uppercase;}
 .huser{display:flex;align-items:center;gap:10px;}
 .hbadge{font-size:10px;padding:4px 10px;border-radius:20px;font-weight:600;letter-spacing:.5px;}
-.hbadge.cine{background:rgba(6,182,212,.15);color:var(--cyan);border:1px solid rgba(6,182,212,.3);}
-.hbadge.mant{background:rgba(245,197,24,.15);color:var(--gold);border:1px solid rgba(245,197,24,.3);}
+.hbadge.cine{background:rgba(106,163,224,.15);color:var(--cyan);border:1px solid rgba(106,163,224,.3);}
+.hbadge.mant{background:rgba(247,196,0,.15);color:var(--gold);border:1px solid rgba(247,196,0,.3);}
 .hbadge.admin{background:rgba(139,92,246,.15);color:var(--purple);border:1px solid rgba(139,92,246,.3);}
 .logout-btn{background:transparent;border:1px solid var(--border2);color:var(--text2);padding:5px 12px;border-radius:6px;font-size:11px;cursor:pointer;font-family:var(--fb);transition:all .2s;}
 .logout-btn:hover{border-color:var(--red);color:var(--red);}
@@ -130,8 +131,8 @@ tr:last-child td{border-bottom:none;}
 .br{background:rgba(239,68,68,.15);color:var(--red);border:1px solid rgba(239,68,68,.3);}
 .bo{background:rgba(249,115,22,.15);color:var(--orange);border:1px solid rgba(249,115,22,.3);}
 .bg{background:rgba(34,197,94,.15);color:var(--green);border:1px solid rgba(34,197,94,.3);}
-.bb{background:rgba(59,130,246,.15);color:var(--blue);border:1px solid rgba(59,130,246,.3);}
-.bc{background:rgba(6,182,212,.15);color:var(--cyan);border:1px solid rgba(6,182,212,.3);}
+.bb{background:rgba(75,111,179,.15);color:var(--blue);border:1px solid rgba(75,111,179,.3);}
+.bc{background:rgba(106,163,224,.15);color:var(--cyan);border:1px solid rgba(106,163,224,.3);}
 .bp{background:rgba(139,92,246,.15);color:var(--purple);border:1px solid rgba(139,92,246,.3);}
 .bw{background:rgba(139,149,171,.1);color:var(--text2);border:1px solid var(--border);}
 
@@ -199,7 +200,7 @@ tr:last-child td{border-bottom:none;}
 
 /* ── ACTUALIZADOR ──────────────────────────────── */
 .upd-zone{border:2px dashed var(--border2);border-radius:10px;padding:32px;text-align:center;cursor:pointer;transition:all .2s;position:relative;background:var(--panel);}
-.upd-zone:hover,.upd-zone.drag{border-color:var(--gold);background:rgba(245,197,24,.04);}
+.upd-zone:hover,.upd-zone.drag{border-color:var(--gold);background:rgba(247,196,0,.04);}
 .upd-zone input{position:absolute;inset:0;opacity:0;cursor:pointer;width:100%;height:100%;}
 .upd-icon{font-size:36px;margin-bottom:12px;}
 .upd-title{font-family:var(--ff);font-size:17px;font-weight:700;margin-bottom:6px;}
