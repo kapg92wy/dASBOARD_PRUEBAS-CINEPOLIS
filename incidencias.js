@@ -18,8 +18,8 @@ async function renderInicio(container) {
     const total     = incs.length;
     const abiertas  = incs.filter(i => i.estado === 'Abierta').length;
     const proceso   = incs.filter(i => !['Abierta','Resuelta','Cerrada'].includes(i.estado)).length;
-    const urgentes  = incs.filter(i => i.prioridad === 'Urgente' && i.estado !== 'Resuelta').length;
     const resueltas = incs.filter(i => i.estado === 'Resuelta').length;
+    const cerradas  = incs.filter(i => i.estado === 'Cerrada').length;
     const recientes = [...incs].sort((a,b) => new Date(b.created_at) - new Date(a.created_at)).slice(0,10);
 
     container.innerHTML =
@@ -27,8 +27,8 @@ async function renderInicio(container) {
       + kcard('gold',   'Total',     total,     '')
       + kcard('red',    'Abiertas',  abiertas,  '')
       + kcard('orange', 'En Proceso',proceso,   '')
-      + kcard('red',    'Urgentes',  urgentes,  '')
       + kcard('green',  'Resueltas', resueltas, '')
+      + kcard('cyan',   'Cerradas',  cerradas,  '')
       + '</div>'
       + '<div class="section-header">MIS ÚLTIMAS INCIDENCIAS</div>'
       + '<div class="twrap"><div class="tscroll"><table>'
@@ -685,6 +685,11 @@ async function saveStatus() {
     btn.textContent = 'Guardando...';
 
     const cambios = { estado: estadoNuevo, nota_manto: nota, foto_url_cierre: urlCierre };
+
+    // Marca cuándo se puso "Resuelta" (para el auto-cierre por inactividad del cine)
+    if (estadoNuevo === 'Resuelta' && r.estado !== 'Resuelta') {
+      cambios.fecha_resuelta = nowISO();
+    }
 
     // Tipo de resolución (Reparación / Retiro), si el selector está visible
     const selTR = document.getElementById('modalTipoRes');
