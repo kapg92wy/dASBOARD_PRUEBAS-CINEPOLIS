@@ -257,7 +257,7 @@ async function renderLista(container) {
     + '<span class="rcount" id="listaCount"></span></div>'
     + '<div class="twrap"><div class="tscroll"><table>'
     + '<thead><tr><th>ID</th><th>Cine</th><th>Serie</th><th>Tipo</th><th>Prioridad</th><th>Estado</th><th>Fecha</th><th></th></tr></thead>'
-    + '<tbody id="tbLista">' + loadingHTML() + '</tbody></table></div></div>';
+    + '<tbody id="tbLista">' + loadingRow(8) + '</tbody></table></div></div>';
   await recargarLista();
 }
 
@@ -328,7 +328,7 @@ async function renderMisAsignadas(container) {
     + '<span class="rcount" id="asigCount"></span></div>'
     + '<div class="twrap"><div class="tscroll"><table>'
     + '<thead><tr><th>ID</th><th>Cine</th><th>Serie</th><th>Tipo</th><th>Prioridad</th><th>Estado</th><th>Asignada</th><th></th></tr></thead>'
-    + '<tbody id="tbMisAsignadas">' + loadingHTML() + '</tbody></table></div></div>';
+    + '<tbody id="tbMisAsignadas">' + loadingRow(8) + '</tbody></table></div></div>';
 
   // Si ya están activas en este dispositivo, ocultar el aviso
   if (typeof notificacionesActivas === 'function') {
@@ -392,7 +392,7 @@ async function renderIncidenciasCines(container) {
     + '<span class="rcount" id="cinesCount"></span></div>'
     + '<div class="twrap"><div class="tscroll"><table>'
     + '<thead><tr><th>ID</th><th>Cine</th><th>Serie</th><th>Tipo</th><th>Prioridad</th><th>Estado</th><th>Reportado por</th><th>Fecha</th><th></th></tr></thead>'
-    + '<tbody id="tbCinesLista">' + loadingHTML() + '</tbody></table></div></div>';
+    + '<tbody id="tbCinesLista">' + loadingRow(9) + '</tbody></table></div></div>';
   await recargarCines();
 }
 
