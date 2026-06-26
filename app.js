@@ -23,8 +23,8 @@ async function initApp() {
   if (['admin','mantenimiento','ejecutivo'].includes(currentUser.rol)) {
     document.getElementById('liveBadge').style.display = 'flex';
     document.getElementById('fechaBadge').style.display = 'block';
-    document.getElementById('headerTitle').textContent = 'DASHBOARD OPERATIVO';
-    document.getElementById('headerSub').textContent   = 'Cinépolis · Gestión de Máquinas y Servicios';
+    document.getElementById('headerTitle').textContent = 'CENTRO DE SERVICIO GALEX';
+    document.getElementById('headerSub').textContent   = 'Gestión de máquinas · Cinépolis';
     await cargarDashboardSnapshot();
     const fb = document.getElementById('fechaBadge');
     if (fb) fb.textContent = D.fecha_actualizacion || '—';
