@@ -1,7 +1,7 @@
 {
-  "name": "Centro de Servicio — Cinépolis",
-  "short_name": "Centro Servicio",
-  "description": "Gestión de incidencias de máquinas — Cinépolis",
+  "name": "Centro de Servicio Galex",
+  "short_name": "Galex Servicio",
+  "description": "Gestión de máquinas de Cinépolis — Galex",
   "start_url": "./",
   "scope": "./",
   "display": "standalone",
@@ -10,8 +10,23 @@
   "theme_color": "#162b57",
   "lang": "es-MX",
   "icons": [
-    { "src": "icon-192.png", "sizes": "192x192", "type": "image/png", "purpose": "any" },
-    { "src": "icon-512.png", "sizes": "512x512", "type": "image/png", "purpose": "any" },
-    { "src": "icon-maskable-512.png", "sizes": "512x512", "type": "image/png", "purpose": "maskable" }
+    {
+      "src": "icon-192.png",
+      "sizes": "192x192",
+      "type": "image/png",
+      "purpose": "any"
+    },
+    {
+      "src": "icon-512.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "any"
+    },
+    {
+      "src": "icon-maskable-512.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "maskable"
+    }
   ]
 }
