@@ -3,14 +3,22 @@
    ═══════════════════════════════════════════════ */
 
 :root {
-  /* ── Paleta Cinépolis (azul + amarillo) ── */
-  --bg:#0c1a3a; --bg2:#0f1f44; --bg3:#16305e;
-  --panel:#14264e; --panel2:#1b3162; --panel3:#22407a;
-  --border:rgba(255,255,255,0.07); --border2:rgba(255,255,255,0.14);
-  --gold:#f7c400; --gold2:#d9ad00;            /* amarillo Cinépolis (acento) */
-  --red:#ef4444; --orange:#f97316; --green:#22c55e;
-  --blue:#4b6fb3; --cyan:#6aa3e0; --purple:#8b5cf6;  /* azules Cinépolis */
-  --text:#eef2fb; --text2:#9fb0d0; --text3:#5b6f96;
+  /* ── Paleta Cinépolis ──  (E)=exacto de tu hoja, (d)=derivado para UI */
+  --bg:#0f1d3f;        /* (d) página, un tono más oscuro que el institucional */
+  --bg2:#162b57;       /* (E) Azul oscuro #162B57 */
+  --bg3:#1f3a6f;       /* (d) campos de formulario */
+  --panel:#162b57;     /* (E) Azul oscuro #162B57 (tarjetas) */
+  --panel2:#203a72;    /* (E) Azul Cinépolis principal #203A72 */
+  --panel3:#2a4a86;    /* (d) hover/realces (principal aclarado) */
+  --border:rgba(255,255,255,0.08); --border2:rgba(255,255,255,0.15);
+  --gold:#f7c400; --gold2:#d9ad00;             /* (E) Amarillo #F7C400 + hover (d) */
+  --red:#ef4444; --orange:#f97316; --green:#22c55e;  /* status (funcionales) */
+  --blue:#4b6fb3;      /* (E) Azul claro #4B6FB3 */
+  --cyan:#6aa3e0;      /* (d) azul claro aclarado (series) */
+  --purple:#8b5cf6;
+  --text:#ffffff;      /* (E) Blanco #FFFFFF */
+  --text2:#aab8d6;     /* (d) texto secundario */
+  --text3:#6b7ea6;     /* (d) texto tenue */
   --ff:'Rajdhani',sans-serif; --fb:'DM Sans',sans-serif;
 }
 *{box-sizing:border-box;margin:0;padding:0;}
@@ -35,7 +43,7 @@ body{background:var(--bg);color:var(--text);font-family:var(--fb);font-size:13px
 
 /* ── APP SHELL ─────────────────────────────────── */
 #app{display:none;}
-.header{background:linear-gradient(135deg,#0a1a3e,#0d2150,#0c1a3a);border-bottom:2px solid var(--gold);padding:0 24px;display:flex;align-items:center;justify-content:space-between;height:60px;position:sticky;top:0;z-index:100;box-shadow:0 4px 32px rgba(247,196,0,0.08);}
+.header{background:linear-gradient(135deg,#162b57,#203a72,#162b57);border-bottom:2px solid var(--gold);padding:0 24px;display:flex;align-items:center;justify-content:space-between;height:60px;position:sticky;top:0;z-index:100;box-shadow:0 4px 32px rgba(247,196,0,0.08);}
 .hlogo{width:34px;height:34px;background:#fff;border-radius:7px;object-fit:contain;display:block;margin-right:12px;}
 .htitle{font-family:var(--ff);font-size:19px;font-weight:700;letter-spacing:2px;}
 .hsub{font-size:10px;color:var(--text2);letter-spacing:.8px;text-transform:uppercase;}
