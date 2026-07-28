@@ -55,6 +55,7 @@
         <span class="dbadge" id="fechaBadge" style="display:none;">—</span>
         <span class="hbadge" id="roleBadge"></span>
         <span style="font-size:12px;color:var(--text2);" id="userLabel"></span>
+        <button class="logout-btn" id="passBtn" title="Cambiar mi contraseña">🔑 Contraseña</button>
         <button class="logout-btn" id="logoutBtn">Salir</button>
       </div>
     </header>
@@ -80,6 +81,16 @@
         <button class="modal-close" id="userModalCloseBtn">✕</button>
       </div>
       <div id="userModalContent"></div>
+    </div>
+  </div>
+
+  <div class="modal-bg" id="modalPassBg">
+    <div class="modal" onclick="event.stopPropagation()" style="max-width:420px;">
+      <div class="modal-title">
+        <span>Cambiar mi contraseña</span>
+        <button class="modal-close" id="passModalCloseBtn">✕</button>
+      </div>
+      <div id="passModalContent"></div>
     </div>
   </div>
 

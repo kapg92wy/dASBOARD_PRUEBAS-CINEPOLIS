@@ -382,7 +382,9 @@ function filtrarMisAsignadas() {
 ══════════════════════════════════════════════ */
 async function renderIncidenciasCines(container) {
   container.innerHTML =
-    '<div class="section-header">INCIDENCIAS REPORTADAS POR LOS CINES</div>'
+    (currentUser.rol === 'ejecutivo'
+        ? '<div class="section-header">INCIDENCIAS DE TODOS LOS CINES · SOLO CONSULTA</div>'
+        : '<div class="section-header">INCIDENCIAS REPORTADAS POR LOS CINES</div>')
     + '<div class="filters">'
     + '<span class="flabel">Estado</span><select id="fcEstado" onchange="filtrarCines()"><option value="">Todos</option><option>Abierta</option><option>En diagnóstico</option><option>En logística</option><option>Atención técnico</option><option>Retirada</option><option value="Reemplazo">Reemplazo en sitio</option><option>Resuelta</option><option>Cerrada</option></select>'
     + '<span class="flabel">Prioridad</span><select id="fcPrio" onchange="filtrarCines()"><option value="">Todas</option><option>Urgente</option><option>Normal</option></select>'
@@ -422,7 +424,9 @@ function filtrarCines() {
   const tb = document.getElementById('tbCinesLista'); if (!tb) return;
   if (!data.length) { tb.innerHTML = '<tr><td colspan="9" class="nodata">Sin resultados</td></tr>'; return; }
 
-  const canDel = currentUser.rol === 'admin';
+  const canDel   = currentUser.rol === 'admin';
+  const soloVer  = currentUser.rol === 'ejecutivo';   // observador: no gestiona
+  const txtBtn   = soloVer ? 'Ver' : 'Gestionar';
   tb.innerHTML = data.map(r => {
     const cn = r.cine.length > 24 ? r.cine.substring(0,22)+'…' : r.cine;
     const nu = r.nombre_usuario || r.usuario_id;
@@ -437,7 +441,7 @@ function filtrarCines() {
       <td style="color:var(--text2);font-size:11px;">${nu}</td>
       <td style="color:var(--text2);">${formatDate(r.created_at)}</td>
       <td style="display:flex;gap:5px;">
-        <button onclick="openModal('${r.id}')" style="background:var(--panel3);border:1px solid var(--border2);color:var(--text);padding:4px 10px;border-radius:5px;font-size:11px;cursor:pointer;">Gestionar</button>
+        <button onclick="openModal('${r.id}')" style="background:var(--panel3);border:1px solid var(--border2);color:var(--text);padding:4px 10px;border-radius:5px;font-size:11px;cursor:pointer;">${txtBtn}</button>
         ${canDel ? `<button onclick="deleteIncDirect('${r.id}','${cineSafe}','${r.estado}')" style="background:rgba(239,68,68,.1);border:1px solid rgba(239,68,68,.3);color:var(--red);padding:4px 8px;border-radius:5px;font-size:11px;cursor:pointer;" title="Eliminar">🗑</button>` : ''}
       </td>
     </tr>`;
@@ -658,6 +662,7 @@ function refreshModalSLA() {
 }
 
 async function saveStatus() {
+  if (!requireRole('mantenimiento','admin','tecnico')) return;   // ejecutivo/cine: solo lectura
   const btn = document.getElementById('saveStatusBtn');
   const estadoNuevo = document.getElementById('modalStatus').value;
   const nota        = document.getElementById('modalNota').value.trim();

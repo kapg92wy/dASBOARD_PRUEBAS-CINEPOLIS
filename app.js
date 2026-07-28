@@ -20,7 +20,7 @@ async function initApp() {
   badge.className   = 'hbadge ' + (rolMap[currentUser.rol] || 'bw');
   document.getElementById('userLabel').textContent = currentUser.nombre;
 
-  if (['admin','mantenimiento','ejecutivo'].includes(currentUser.rol)) {
+  if (['admin','mantenimiento'].includes(currentUser.rol)) {
     document.getElementById('liveBadge').style.display = 'flex';
     document.getElementById('fechaBadge').style.display = 'block';
     document.getElementById('headerTitle').textContent = 'CENTRO DE SERVICIO GALEX';
@@ -42,13 +42,19 @@ async function initApp() {
     }, REFRESH_INTERVAL_MS);
   }
 
+  if (currentUser.rol === 'ejecutivo') {
+    document.getElementById('liveBadge').style.display = 'flex';
+    document.getElementById('headerTitle').textContent = 'CENTRO DE SERVICIO GALEX';
+    document.getElementById('headerSub').textContent   = 'Gestión de máquinas · Cinépolis';
+  }
+
   buildNav();
 
   const firstTab = currentUser.rol === 'cinepolis'
     ? 'inicio'
     : currentUser.rol === 'tecnico'
       ? 'mis_asignadas'
-      : currentUser.rol === 'mantenimiento'
+      : ['mantenimiento','ejecutivo'].includes(currentUser.rol)
         ? 'incidencias_cines'
         : 'dashboard';
   renderTab(firstTab);
@@ -95,12 +101,9 @@ function buildNav() {
       { id:'dashboard_venta',      label:'📈 Alerta Venta' },
     ];
   } else if (rol === 'ejecutivo') {
+    // Observador: solo consulta las incidencias que reportan los cines
     tabs = [
-      { id:'dashboard',            label:'📊 Resumen General' },
-      { id:'incidencias_cines',    label:'📩 Incidencias Cines', badge:true },
-      { id:'dashboard_incidencias',label:'🔧 Incidencias BD' },
-      { id:'dashboard_prioridad',  label:'⚡ Por Prioridad' },
-      { id:'dashboard_venta',      label:'📈 Alerta Venta' },
+      { id:'incidencias_cines',    label:'📩 Incidencias de Cines', badge:true },
     ];
   } else { // admin
     tabs = [
@@ -169,6 +172,9 @@ function setupEventListeners() {
   document.getElementById('loginUser').addEventListener('keydown', e => { if(e.key==='Enter') doLogin(); });
   document.getElementById('loginBtn').onclick  = doLogin;
   document.getElementById('logoutBtn').onclick = doLogout;
+  document.getElementById('passBtn').onclick   = openPassModal;
+  document.getElementById('modalPassBg').addEventListener('click', closePassModal);
+  document.getElementById('passModalCloseBtn').addEventListener('click', () => closePassModal());
   document.getElementById('modalBg').addEventListener('click', closeModal);
   document.getElementById('modalCloseBtn').addEventListener('click', () => closeModal());
   document.getElementById('modalUserBg').addEventListener('click', closeUserModal);

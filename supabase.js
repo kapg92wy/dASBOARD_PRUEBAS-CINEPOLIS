@@ -113,6 +113,16 @@ const DB = {
   },
 
   /* ─────────────────────────────────────────────
+     CORREOS PENDIENTES (cola que procesa Python)
+  ───────────────────────────────────────────── */
+  async encolarCorreo(correo) {
+    const { data, error } = await sb
+      .from('cp_correos_pendientes')
+      .insert([correo]).select().single();
+    return sbCheck(data, error, 'encolarCorreo');
+  },
+
+  /* ─────────────────────────────────────────────
      LOG
   ───────────────────────────────────────────── */
   async getLog() {

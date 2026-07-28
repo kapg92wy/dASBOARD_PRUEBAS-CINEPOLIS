@@ -67,3 +67,67 @@ function requireRole(...roles) {
   }
   return true;
 }
+
+/* ═══════════════════════════════════════════════
+   CAMBIO DE CONTRASEÑA (cualquier usuario)
+   ═══════════════════════════════════════════════ */
+function openPassModal() {
+  if (!currentUser) return;
+  document.getElementById('passModalContent').innerHTML = `
+    <div style="font-size:12px;color:var(--text2);margin-bottom:16px;">
+      Usuario: <strong style="color:var(--gold);">${currentUser.username}</strong>
+    </div>
+    <div class="form-group" style="margin-bottom:14px;">
+      <label class="form-label">Contraseña actual</label>
+      <input class="form-input" id="pOld" type="password" placeholder="••••••••" autocomplete="current-password">
+    </div>
+    <div class="form-group" style="margin-bottom:14px;">
+      <label class="form-label">Nueva contraseña</label>
+      <input class="form-input" id="pNew" type="password" placeholder="Mínimo 6 caracteres" autocomplete="new-password">
+    </div>
+    <div class="form-group" style="margin-bottom:18px;">
+      <label class="form-label">Repite la nueva contraseña</label>
+      <input class="form-input" id="pNew2" type="password" placeholder="••••••••" autocomplete="new-password">
+    </div>
+    <div style="display:flex;gap:10px;">
+      <button class="btn-primary" id="savePassBtn" onclick="savePassword()">Guardar</button>
+      <button class="btn-ghost" onclick="closePassModal()">Cancelar</button>
+    </div>
+    <div style="color:var(--red);font-size:12px;margin-top:10px;" id="passErr"></div>`;
+  document.getElementById('modalPassBg').classList.add('open');
+  setTimeout(() => { const el = document.getElementById('pOld'); if (el) el.focus(); }, 60);
+}
+
+function closePassModal(e) {
+  if (e && e.target !== document.getElementById('modalPassBg')) return;
+  document.getElementById('modalPassBg').classList.remove('open');
+}
+
+async function savePassword() {
+  const oldP = document.getElementById('pOld').value;
+  const newP = document.getElementById('pNew').value;
+  const rep  = document.getElementById('pNew2').value;
+  const err  = document.getElementById('passErr');
+  const btn  = document.getElementById('savePassBtn');
+  err.textContent = '';
+
+  if (!oldP || !newP || !rep)      { err.textContent = 'Llena todos los campos'; return; }
+  if (oldP !== currentUser.password){ err.textContent = 'Tu contraseña actual no es correcta'; return; }
+  if (newP.length < 6)             { err.textContent = 'La nueva contraseña debe tener al menos 6 caracteres'; return; }
+  if (newP !== rep)                { err.textContent = 'Las contraseñas nuevas no coinciden'; return; }
+  if (newP === oldP)               { err.textContent = 'La nueva contraseña debe ser distinta a la actual'; return; }
+
+  btn.disabled = true; btn.textContent = 'Guardando...';
+  try {
+    await DB.actualizarUsuario(currentUser.id, { password: newP });
+    // Refrescar la sesión en memoria y en el navegador
+    currentUser.password = newP;
+    sessionStorage.setItem('cp_session', JSON.stringify(currentUser));
+    closePassModal();
+    showToast('Contraseña actualizada ✓', 'success');
+  } catch (e) {
+    err.textContent = 'Error: ' + e.message;
+  } finally {
+    btn.disabled = false; btn.textContent = 'Guardar';
+  }
+}
