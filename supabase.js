@@ -27,17 +27,6 @@ const DB = {
     return sbCheck(data, error, 'getUsuarios');
   },
 
-  // Lista de técnicos activos (para asignar incidencias)
-  async getTecnicos() {
-    const { data, error } = await sb
-      .from(CONFIG.TABLA_USUARIOS)
-      .select('*')
-      .eq('rol', 'tecnico')
-      .eq('activo', 1)
-      .order('nombre');
-    return sbCheck(data, error, 'getTecnicos');
-  },
-
   async loginUsuario(username, password) {
     const { data, error } = await sb
       .from(CONFIG.TABLA_USUARIOS)
@@ -110,16 +99,6 @@ const DB = {
     const { error } = await sb
       .from(CONFIG.TABLA_INCIDENCIAS).delete().eq('id', id);
     sbCheck(null, error, 'eliminarIncidencia');
-  },
-
-  /* ─────────────────────────────────────────────
-     CORREOS PENDIENTES (cola que procesa Python)
-  ───────────────────────────────────────────── */
-  async encolarCorreo(correo) {
-    const { data, error } = await sb
-      .from('cp_correos_pendientes')
-      .insert([correo]).select().single();
-    return sbCheck(data, error, 'encolarCorreo');
   },
 
   /* ─────────────────────────────────────────────
@@ -208,15 +187,30 @@ const DB = {
   },
 
   // Obtener cines únicos (para el formulario de crear usuario)
+  // Pagina en lotes porque Supabase corta a 1000 filas por consulta.
+  // Con ~4719 máquinas, sin paginar se perdían los cines del final
+  // del abecedario (UNIVERSIDAD, etc.).
   async getCinesUnicos() {
-    const { data, error } = await sb
-      .from('cp_maquinas')
-      .select('cine')
-      .order('cine');
-    if (error) throw new Error(`[getCinesUnicos] ${error.message}`);
-    // Deduplicar
-    const unicos = [...new Set(data.map(r => r.cine))];
-    return unicos;
+    const PAGE = 1000;
+    let desde  = 0;
+    const set  = new Set();
+
+    while (true) {
+      const { data, error } = await sb
+        .from('cp_maquinas')
+        .select('cine')
+        .order('cine')
+        .range(desde, desde + PAGE - 1);
+      if (error) throw new Error(`[getCinesUnicos] ${error.message}`);
+      if (!data || !data.length) break;
+
+      data.forEach(r => { if (r.cine) set.add(r.cine); });
+
+      if (data.length < PAGE) break;   // última página
+      desde += PAGE;
+    }
+
+    return [...set].sort();
   },
 
   // Reemplazar TODAS las máquinas con los datos del Excel (upsert masivo)
