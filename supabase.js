@@ -1,6 +1,5 @@
 /* ═══════════════════════════════════════════════
    supabase.js — Capa de acceso a datos
-   Reemplaza completamente al localStorage.
    Todas las operaciones de BD pasan por aquí.
    ═══════════════════════════════════════════════ */
 
