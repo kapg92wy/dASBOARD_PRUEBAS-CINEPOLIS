@@ -1,8 +1,5 @@
 /* ═══════════════════════════════════════════════
    config.js — Configuración y credenciales
-   ⚠️  REEMPLAZA los dos valores de abajo con los
-       de tu proyecto en supabase.com/dashboard
-       Settings → API
    ═══════════════════════════════════════════════ */
 const CONFIG = {
   SUPABASE_URL:      'https://pnxpvpzdvvwoborksvqa.supabase.co',  // ← CAMBIA
