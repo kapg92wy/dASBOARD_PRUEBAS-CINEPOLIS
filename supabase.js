@@ -13,28 +13,58 @@ function sbCheck(data, error, op) {
   return data;
 }
 
+// Tiempo máximo que esperamos una respuesta de Supabase antes de rendirnos.
+// Evita que el spinner de "Cargando..." se quede pegado para siempre cuando
+// la red del cine se traba y el fetch nunca resuelve ni rechaza.
+const REQUEST_TIMEOUT_MS = 15000;
+
+// Ejecuta una consulta de Supabase con timeout + abort.
+// Si la petición tarda más de REQUEST_TIMEOUT_MS, la cancelamos y lanzamos un
+// error legible para que la vista muestre el mensaje en vez del spinner eterno.
+function withTimeout(query, op, ms = REQUEST_TIMEOUT_MS) {
+  const controller = new AbortController();
+  const timer = setTimeout(() => controller.abort(), ms);
+
+  // .abortSignal() cancela el fetch subyacente (supabase-js v2).
+  const q = (query && typeof query.abortSignal === 'function')
+    ? query.abortSignal(controller.signal)
+    : query;
+
+  // Carrera adicional: aunque el cliente no respete el abort, el spinner
+  // se libera igual cuando vence el timeout.
+  const timeout = new Promise((_, reject) => {
+    controller.signal.addEventListener('abort', () => {
+      reject(new Error(`[${op}] La conexión tardó demasiado. Revisa tu internet e inténtalo de nuevo.`));
+    });
+  });
+
+  return Promise.race([Promise.resolve(q), timeout]).finally(() => clearTimeout(timer));
+}
+
 const DB = {
 
   /* ─────────────────────────────────────────────
      USUARIOS
   ───────────────────────────────────────────── */
   async getUsuarios() {
-    const { data, error } = await sb
+    const q = sb
       .from(CONFIG.TABLA_USUARIOS)
       .select('*')
       .eq('activo', 1)
       .order('created_at');
+    const { data, error } = await withTimeout(q, 'getUsuarios');
     return sbCheck(data, error, 'getUsuarios');
   },
 
   // Solo técnicos de campo activos (para asignar en el modal)
   async getTecnicos() {
-    const { data, error } = await sb
+    const q = sb
       .from(CONFIG.TABLA_USUARIOS)
       .select('*')
       .eq('rol', 'tecnico')
       .eq('activo', 1)
       .order('nombre');
+    const { data, error } = await withTimeout(q, 'getTecnicos');
     return sbCheck(data, error, 'getTecnicos');
   },
 
@@ -81,14 +111,15 @@ const DB = {
     if (filtros.tecnico_id) q = q.eq('tecnico_id', filtros.tecnico_id);
     if (filtros.estado)     q = q.eq('estado', filtros.estado);
     q = q.order('created_at', { ascending: false });
-    const { data, error } = await q;
+    const { data, error } = await withTimeout(q, 'getIncidencias');
     return sbCheck(data, error, 'getIncidencias');
   },
 
   async getIncidencia(id) {
-    const { data, error } = await sb
+    const q = sb
       .from(CONFIG.TABLA_INCIDENCIAS)
       .select('*').eq('id', id).single();
+    const { data, error } = await withTimeout(q, 'getIncidencia');
     return sbCheck(data, error, 'getIncidencia');
   },
 
@@ -117,10 +148,11 @@ const DB = {
      LOG
   ───────────────────────────────────────────── */
   async getLog() {
-    const { data, error } = await sb
+    const q = sb
       .from(CONFIG.TABLA_LOG)
       .select('*')
       .order('created_at', { ascending: false });
+    const { data, error } = await withTimeout(q, 'getLog');
     return sbCheck(data, error, 'getLog');
   },
 
@@ -134,9 +166,10 @@ const DB = {
      DASHBOARD SNAPSHOT
   ───────────────────────────────────────────── */
   async getDashboard() {
-    const { data, error } = await sb
+    const q = sb
       .from(CONFIG.TABLA_SNAPSHOT)
       .select('*').eq('id', 1).single();
+    const { data, error } = await withTimeout(q, 'getDashboard');
     return sbCheck(data, error, 'getDashboard');
   },
 
@@ -194,7 +227,7 @@ const DB = {
   async getMaquinas(cine) {
     let q = sb.from('cp_maquinas').select('*').order('nombre');
     if (cine) q = q.eq('cine', cine);
-    const { data, error } = await q;
+    const { data, error } = await withTimeout(q, 'getMaquinas');
     return sbCheck(data, error, 'getMaquinas');
   },
 

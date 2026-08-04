@@ -52,7 +52,8 @@ async function renderInicio(container) {
       </tr>`;
     }).join('');
   } catch(err) {
-    container.innerHTML = errorBox('No se pudieron cargar tus incidencias: ' + err.message);
+    container.innerHTML = errorBox('No se pudieron cargar tus incidencias: ' + err.message)
+      + '<div style="text-align:center;margin-top:14px;"><button class="btn-ghost" style="padding:8px 18px;font-size:12px;" onclick="renderInicio(document.getElementById(\'tab-inicio\'))">🔄 Reintentar</button></div>';
   }
 }
 
@@ -583,7 +584,8 @@ async function openModal(id) {
       `;
 
   } catch(err) {
-    document.getElementById('modalContent').innerHTML = errorBox('Error al cargar: ' + err.message);
+    document.getElementById('modalContent').innerHTML = errorBox('Error al cargar: ' + err.message)
+      + `<div style="text-align:center;margin-top:14px;"><button class="btn-ghost" style="padding:8px 18px;font-size:12px;" onclick="openModal('${id}')">🔄 Reintentar</button></div>`;
   }
 }
 
