@@ -5,8 +5,7 @@
 let editingIncId = null;
 let photoBase64  = '';
 let _listaIncs   = [];   // caché para filtrado local (cine)
-let _todasIncs   = [];   // caché para filtrado local (manto/admin)
-let _misAsig     = [];   // caché para filtrado local (técnico)
+let _todasIncs   = [];   // caché para filtrado local (manto/admin/técnico)
 
 /* ══════════════════════════════════════════════
    CINE — Mi Panel
@@ -17,9 +16,9 @@ async function renderInicio(container) {
     const incs = await DB.getIncidencias({ usuario_id: currentUser.id });
     const total     = incs.length;
     const abiertas  = incs.filter(i => i.estado === 'Abierta').length;
-    const proceso   = incs.filter(i => !['Abierta','Resuelta','Cerrada'].includes(i.estado)).length;
+    const proceso   = incs.filter(i => i.estado === 'En proceso').length;
+    const urgentes  = incs.filter(i => i.prioridad === 'Urgente' && i.estado !== 'Resuelta').length;
     const resueltas = incs.filter(i => i.estado === 'Resuelta').length;
-    const cerradas  = incs.filter(i => i.estado === 'Cerrada').length;
     const recientes = [...incs].sort((a,b) => new Date(b.created_at) - new Date(a.created_at)).slice(0,10);
 
     container.innerHTML =
@@ -27,8 +26,8 @@ async function renderInicio(container) {
       + kcard('gold',   'Total',     total,     '')
       + kcard('red',    'Abiertas',  abiertas,  '')
       + kcard('orange', 'En Proceso',proceso,   '')
+      + kcard('red',    'Urgentes',  urgentes,  '')
       + kcard('green',  'Resueltas', resueltas, '')
-      + kcard('cyan',   'Cerradas',  cerradas,  '')
       + '</div>'
       + '<div class="section-header">MIS ÚLTIMAS INCIDENCIAS</div>'
       + '<div class="twrap"><div class="tscroll"><table>'
@@ -48,7 +47,7 @@ async function renderInicio(container) {
         <td style="color:var(--cyan);">${r.serie}</td>
         <td>${r.tipo}</td>
         <td>${prioBadge(r.prioridad)}</td>
-        <td>${estadoBadge(r.estado)} ${resolucionBadge(r.tipo_resolucion)}</td>
+        <td>${estadoBadge(r.estado)}</td>
         <td style="color:var(--text2);">${formatDate(r.created_at)}</td>
       </tr>`;
     }).join('');
@@ -79,7 +78,7 @@ async function renderNueva(container) {
   }
 
   const nombresUnicos = [...new Set(maqCine.map(m => m.nombre))].sort();
-  
+
   // Función para llenar series cuando eligen máquina
   window.actualizarSeries = function() {
     const selNombre = document.getElementById('fNombreMaquina').value;
@@ -98,7 +97,7 @@ async function renderNueva(container) {
       <div class="form-title">Reportar Nueva Incidencia</div>
       <div class="form-sub" style="color:var(--gold);">Cine: <strong>${currentUser.nombre}</strong> · Completa los campos obligatorios (*)</div>
       <div class="form-grid">
-        
+
         <div class="form-group">
           <label class="form-label">Máquina Afectada *</label>
           <select class="form-select" id="fNombreMaquina" onchange="actualizarSeries()">
@@ -106,14 +105,14 @@ async function renderNueva(container) {
             ${nombresUnicos.map(n => `<option value="${n}">${n}</option>`).join('')}
           </select>
         </div>
-        
+
         <div class="form-group">
           <label class="form-label">Número de Serie *</label>
           <select class="form-select" id="fSerie">
             <option value="">Primero selecciona una máquina...</option>
           </select>
         </div>
-        
+
         <div class="form-group">
           <label class="form-label">Tipo de Falla *</label>
           <select class="form-select" id="fTipo">
@@ -127,12 +126,20 @@ async function renderNueva(container) {
             <option>OTRO</option>
           </select>
         </div>
-        
+
+        <div class="form-group">
+          <label class="form-label">Prioridad *</label>
+          <select class="form-select" id="fPrioridad">
+            <option value="Normal">Normal</option>
+            <option value="Urgente">🔴 Urgente</option>
+          </select>
+        </div>
+
         <div class="form-group full">
           <label class="form-label">Descripción del Problema *</label>
           <textarea class="form-textarea" id="fDesc" placeholder="Describe detalladamente qué está pasando..."></textarea>
         </div>
-        
+
         <div class="form-group full">
           <label class="form-label">Foto (opcional)</label>
           <div class="photo-zone">
@@ -141,7 +148,7 @@ async function renderNueva(container) {
             <img id="photoPreview" class="photo-preview" style="display:none;">
           </div>
         </div>
-        
+
       </div>
       <button class="submit-btn" id="submitBtn" onclick="submitInc()">✔ REGISTRAR INCIDENCIA</button>
       <div class="success-msg" id="successMsg" style="display:none; color:var(--green); font-weight:bold; margin-top:10px;">✅ Incidencia registrada. Mantenimiento fue notificado.</div>
@@ -164,6 +171,7 @@ async function submitInc() {
   const maquina   = document.getElementById('fNombreMaquina').value;
   const serie     = document.getElementById('fSerie').value;
   const tipo      = document.getElementById('fTipo').value;
+  const prioridad = document.getElementById('fPrioridad').value;
   const desc      = document.getElementById('fDesc').value.trim();
 
   if (!maquina || !serie || !tipo || !desc) {
@@ -192,13 +200,16 @@ async function submitInc() {
       serie: serie,
       tipo: maquina,
       clasificacion_falla: tipo,
-      prioridad: 'Normal',
+      prioridad: prioridad,
       descripcion: desc,
       foto_url: fotoFinalUrl,
       estado: 'Abierta',
       usuario_id: currentUser.id,
       nombre_usuario: currentUser.nombre,
       nota_manto: '',
+      tecnico_id: '',
+      tecnico_nombre: '',
+      tecnico_telefono: '',
       created_at: ts,
       updated_at: ts,
     };
@@ -220,6 +231,7 @@ async function submitInc() {
     document.getElementById('fNombreMaquina').value = '';
     document.getElementById('fSerie').innerHTML = '<option value="">Primero selecciona una máquina...</option>';
     document.getElementById('fTipo').value = '';
+    document.getElementById('fPrioridad').value = 'Normal';
     document.getElementById('fDesc').value = '';
     document.getElementById('photoPreview').style.display = 'none';
     document.getElementById('photoPlaceholder').style.display = 'block';
@@ -248,7 +260,7 @@ async function renderLista(container) {
   container.innerHTML =
     '<div style="background:rgba(6,182,212,.07);border:1px solid rgba(6,182,212,.2);border-radius:8px;padding:10px 16px;margin-bottom:14px;font-size:12px;color:var(--cyan);">📋 Mostrando solo las incidencias que tú has reportado</div>'
     + '<div class="filters">'
-    + '<span class="flabel">Estado</span><select id="fEstado" onchange="filtrarLista()"><option value="">Todos</option><option>Abierta</option><option>En diagnóstico</option><option>En logística</option><option>Atención técnico</option><option>Retirada</option><option value="Reemplazo">Reemplazo en sitio</option><option>Resuelta</option><option>Cerrada</option></select>'
+    + '<span class="flabel">Estado</span><select id="fEstado" onchange="filtrarLista()"><option value="">Todos</option><option>Abierta</option><option>En proceso</option><option>Resuelta</option></select>'
     + '<span class="flabel">Tipo</span><select id="fTipoF" onchange="filtrarLista()"><option value="">Todos</option><option>OPERANDO PARCIALMENTE</option><option>FUERA DE SERVICIO</option><option>IMAGEN / ESTÉTICA</option><option>MONEDERO / COBRO</option><option>PANTALLA / DISPLAY</option><option>VENTA CERO</option><option>OTRO</option></select>'
     + '<span class="flabel">Prioridad</span><select id="fPrioF" onchange="filtrarLista()"><option value="">Todas</option><option>Urgente</option><option>Normal</option></select>'
     + '<input type="text" id="fBuscar" placeholder="Buscar serie, ID..." oninput="filtrarLista()">'
@@ -257,7 +269,7 @@ async function renderLista(container) {
     + '<span class="rcount" id="listaCount"></span></div>'
     + '<div class="twrap"><div class="tscroll"><table>'
     + '<thead><tr><th>ID</th><th>Cine</th><th>Serie</th><th>Tipo</th><th>Prioridad</th><th>Estado</th><th>Fecha</th><th></th></tr></thead>'
-    + '<tbody id="tbLista">' + loadingRow(8) + '</tbody></table></div></div>';
+    + '<tbody id="tbLista">' + loadingHTML() + '</tbody></table></div></div>';
   await recargarLista();
 }
 
@@ -298,7 +310,7 @@ function filtrarLista() {
       <td style="color:var(--cyan);">${r.serie}</td>
       <td>${r.tipo}</td>
       <td>${prioBadge(r.prioridad)}</td>
-      <td>${estadoBadge(r.estado)} ${resolucionBadge(r.tipo_resolucion)}</td>
+      <td>${estadoBadge(r.estado)}</td>
       <td style="color:var(--text2);">${formatDate(r.created_at)}</td>
       <td><button onclick="openModal('${r.id}')" style="background:var(--panel3);border:1px solid var(--border2);color:var(--text);padding:4px 10px;border-radius:5px;font-size:11px;cursor:pointer;">Ver</button></td>
     </tr>`;
@@ -312,67 +324,57 @@ function limpiarFiltrosLista() {
 }
 
 /* ══════════════════════════════════════════════
-   TÉCNICO — Mis Asignadas
+   TÉCNICO DE CAMPO — Mis Asignaciones
 ══════════════════════════════════════════════ */
-async function renderMisAsignadas(container) {
+async function renderMisAsignaciones(container) {
   container.innerHTML =
-    '<div id="notifBanner" style="display:flex;align-items:center;justify-content:space-between;gap:12px;background:rgba(245,197,24,.07);border:1px solid rgba(245,197,24,.25);border-radius:8px;padding:12px 16px;margin-bottom:14px;flex-wrap:wrap;">'
-    + '<div style="font-size:12px;color:var(--text2);flex:1;min-width:180px;">🔔 Activa las notificaciones para que te avise cuando te asignen una incidencia, aunque tengas la app cerrada.</div>'
-    + '<button class="btn-primary" id="btnNotif" onclick="activarNotificaciones()">Activar notificaciones</button>'
-    + '</div>'
-    + '<div class="section-header">INCIDENCIAS ASIGNADAS A MÍ</div>'
+    '<div style="background:rgba(59,130,246,.07);border:1px solid rgba(59,130,246,.2);border-radius:8px;padding:10px 16px;margin-bottom:14px;font-size:12px;color:var(--blue);">🔧 Estas son las incidencias que te asignó el equipo de mantenimiento</div>'
     + '<div class="filters">'
-    + '<span class="flabel">Estado</span><select id="faEstado" onchange="filtrarMisAsignadas()"><option value="">Todos</option><option>Abierta</option><option>En diagnóstico</option><option>En logística</option><option>Atención técnico</option><option>Retirada</option><option value="Reemplazo">Reemplazo en sitio</option><option>Resuelta</option><option>Cerrada</option></select>'
-    + '<input type="text" id="faBuscar" placeholder="Buscar cine, serie, ID..." oninput="filtrarMisAsignadas()">'
-    + '<button onclick="recargarMisAsignadas()" class="btn-ghost" style="padding:5px 12px;font-size:11px;">🔄 Actualizar</button>'
-    + '<span class="rcount" id="asigCount"></span></div>'
+    + '<span class="flabel">Estado</span><select id="fmEstado" onchange="filtrarMisAsign()"><option value="">Todos</option><option>Abierta</option><option>En proceso</option><option>Resuelta</option></select>'
+    + '<input type="text" id="fmBuscar" placeholder="Buscar cine, serie, ID..." oninput="filtrarMisAsign()">'
+    + '<button onclick="recargarMisAsignaciones()" class="btn-ghost" style="padding:5px 12px;font-size:11px;">🔄 Actualizar</button>'
+    + '<span class="rcount" id="misAsignCount"></span></div>'
     + '<div class="twrap"><div class="tscroll"><table>'
-    + '<thead><tr><th>ID</th><th>Cine</th><th>Serie</th><th>Tipo</th><th>Prioridad</th><th>Estado</th><th>Asignada</th><th></th></tr></thead>'
-    + '<tbody id="tbMisAsignadas">' + loadingRow(8) + '</tbody></table></div></div>';
-
-  // Si ya están activas en este dispositivo, ocultar el aviso
-  if (typeof notificacionesActivas === 'function') {
-    notificacionesActivas().then(activas => {
-      const b = document.getElementById('notifBanner');
-      if (activas && b) b.style.display = 'none';
-    });
-  }
-  await recargarMisAsignadas();
+    + '<thead><tr><th>ID</th><th>Cine</th><th>Serie</th><th>Tipo</th><th>Prioridad</th><th>Estado</th><th>Fecha</th><th></th></tr></thead>'
+    + '<tbody id="tbMisAsign">' + loadingHTML() + '</tbody></table></div></div>';
+  await recargarMisAsignaciones();
 }
 
-async function recargarMisAsignadas() {
+async function recargarMisAsignaciones() {
   try {
-    const all = await DB.getIncidencias();
-    _misAsig = all.filter(r => r.tecnico_id === currentUser.id);
-    filtrarMisAsignadas();
+    _todasIncs = await DB.getIncidencias({ tecnico_id: currentUser.id });
+    filtrarMisAsign();
   } catch(err) {
-    const tb = document.getElementById('tbMisAsignadas');
+    const tb = document.getElementById('tbMisAsign');
     if (tb) tb.innerHTML = `<tr><td colspan="8" class="nodata">${errorBox(err.message)}</td></tr>`;
   }
 }
 
-function filtrarMisAsignadas() {
-  const est = document.getElementById('faEstado')?.value || '';
-  const bus = (document.getElementById('faBuscar')?.value || '').toLowerCase();
-  const data = _misAsig.filter(r => {
+function filtrarMisAsign() {
+  const est = document.getElementById('fmEstado')?.value || '';
+  const bus = (document.getElementById('fmBuscar')?.value || '').toLowerCase();
+
+  const data = _todasIncs.filter(r => {
     if (est && r.estado !== est) return false;
     if (bus && ![r.cine,r.serie,r.id,r.tipo].join(' ').toLowerCase().includes(bus)) return false;
     return true;
   });
-  const c = document.getElementById('asigCount'); if (c) c.textContent = data.length + ' registros';
-  const tb = document.getElementById('tbMisAsignadas'); if (!tb) return;
+
+  const lc = document.getElementById('misAsignCount'); if (lc) lc.textContent = data.length + ' registros';
+  const tb = document.getElementById('tbMisAsign'); if (!tb) return;
   if (!data.length) { tb.innerHTML = '<tr><td colspan="8" class="nodata">No tienes incidencias asignadas</td></tr>'; return; }
+
   tb.innerHTML = data.map(r => {
-    const cn = (r.cine && r.cine.length > 24) ? r.cine.substring(0,22)+'…' : (r.cine||'');
+    const cn = r.cine.length > 24 ? r.cine.substring(0,22)+'…' : r.cine;
     return `<tr>
       <td style="font-family:var(--ff);color:var(--gold);font-weight:600;">${r.id}</td>
-      <td title="${r.cine||''}">${cn}</td>
+      <td title="${r.cine}">${cn}</td>
       <td style="color:var(--cyan);">${r.serie}</td>
-      <td>${r.tipo||''}</td>
+      <td>${r.tipo}</td>
       <td>${prioBadge(r.prioridad)}</td>
-      <td>${estadoBadge(r.estado)} ${resolucionBadge(r.tipo_resolucion)}</td>
-      <td style="color:var(--text2);">${r.fecha_asignacion ? formatDate(r.fecha_asignacion) : '—'}</td>
-      <td><button onclick="openModal('${r.id}')" style="background:var(--panel3);border:1px solid var(--border2);color:var(--text);padding:4px 10px;border-radius:5px;font-size:11px;cursor:pointer;">Atender</button></td>
+      <td>${estadoBadge(r.estado)}</td>
+      <td style="color:var(--text2);">${formatDate(r.created_at)}</td>
+      <td><button onclick="openModal('${r.id}')" style="background:var(--panel3);border:1px solid var(--border2);color:var(--text);padding:4px 10px;border-radius:5px;font-size:11px;cursor:pointer;">Gestionar</button></td>
     </tr>`;
   }).join('');
 }
@@ -382,19 +384,17 @@ function filtrarMisAsignadas() {
 ══════════════════════════════════════════════ */
 async function renderIncidenciasCines(container) {
   container.innerHTML =
-    (currentUser.rol === 'ejecutivo'
-        ? '<div class="section-header">INCIDENCIAS DE TODOS LOS CINES · SOLO CONSULTA</div>'
-        : '<div class="section-header">INCIDENCIAS REPORTADAS POR LOS CINES</div>')
+    '<div class="section-header">INCIDENCIAS REPORTADAS POR LOS CINES</div>'
     + '<div class="filters">'
-    + '<span class="flabel">Estado</span><select id="fcEstado" onchange="filtrarCines()"><option value="">Todos</option><option>Abierta</option><option>En diagnóstico</option><option>En logística</option><option>Atención técnico</option><option>Retirada</option><option value="Reemplazo">Reemplazo en sitio</option><option>Resuelta</option><option>Cerrada</option></select>'
+    + '<span class="flabel">Estado</span><select id="fcEstado" onchange="filtrarCines()"><option value="">Todos</option><option>Abierta</option><option>En proceso</option><option>Resuelta</option></select>'
     + '<span class="flabel">Prioridad</span><select id="fcPrio" onchange="filtrarCines()"><option value="">Todas</option><option>Urgente</option><option>Normal</option></select>'
     + '<input type="text" id="fcBuscar" placeholder="Buscar cine, serie, ID..." oninput="filtrarCines()">'
     + '<button onclick="limpiarFiltrosCines()" class="btn-ghost" style="padding:5px 12px;font-size:11px;">Limpiar</button>'
     + '<button onclick="recargarCines()" class="btn-ghost" style="padding:5px 12px;font-size:11px;">🔄 Actualizar</button>'
     + '<span class="rcount" id="cinesCount"></span></div>'
     + '<div class="twrap"><div class="tscroll"><table>'
-    + '<thead><tr><th>ID</th><th>Cine</th><th>Serie</th><th>Tipo</th><th>Prioridad</th><th>Estado</th><th>Reportado por</th><th>Fecha</th><th></th></tr></thead>'
-    + '<tbody id="tbCinesLista">' + loadingRow(9) + '</tbody></table></div></div>';
+    + '<thead><tr><th>ID</th><th>Cine</th><th>Serie</th><th>Tipo</th><th>Prioridad</th><th>Estado</th><th>Técnico</th><th>Reportado por</th><th>Fecha</th><th></th></tr></thead>'
+    + '<tbody id="tbCinesLista">' + loadingHTML() + '</tbody></table></div></div>';
   await recargarCines();
 }
 
@@ -404,7 +404,7 @@ async function recargarCines() {
     filtrarCines();
   } catch(err) {
     const tb = document.getElementById('tbCinesLista');
-    if (tb) tb.innerHTML = `<tr><td colspan="9" class="nodata">${errorBox(err.message)}</td></tr>`;
+    if (tb) tb.innerHTML = `<tr><td colspan="10" class="nodata">${errorBox(err.message)}</td></tr>`;
   }
 }
 
@@ -416,20 +416,21 @@ function filtrarCines() {
   const data = _todasIncs.filter(r => {
     if (est && r.estado    !== est) return false;
     if (pri && r.prioridad !== pri) return false;
-    if (bus && ![r.cine,r.serie,r.id,r.tipo,r.nombre_usuario||''].join(' ').toLowerCase().includes(bus)) return false;
+    if (bus && ![r.cine,r.serie,r.id,r.tipo,r.nombre_usuario||'',r.tecnico_nombre||''].join(' ').toLowerCase().includes(bus)) return false;
     return true;
   });
 
   const lc = document.getElementById('cinesCount'); if (lc) lc.textContent = data.length + ' registros';
   const tb = document.getElementById('tbCinesLista'); if (!tb) return;
-  if (!data.length) { tb.innerHTML = '<tr><td colspan="9" class="nodata">Sin resultados</td></tr>'; return; }
+  if (!data.length) { tb.innerHTML = '<tr><td colspan="10" class="nodata">Sin resultados</td></tr>'; return; }
 
-  const canDel   = currentUser.rol === 'admin';
-  const soloVer  = currentUser.rol === 'ejecutivo';   // observador: no gestiona
-  const txtBtn   = soloVer ? 'Ver' : 'Gestionar';
+  const canDel = currentUser.rol === 'admin';
   tb.innerHTML = data.map(r => {
     const cn = r.cine.length > 24 ? r.cine.substring(0,22)+'…' : r.cine;
     const nu = r.nombre_usuario || r.usuario_id;
+    const tec = r.tecnico_nombre
+      ? `<span style="color:var(--gold);">🔧 ${r.tecnico_nombre}</span>`
+      : '<span style="color:var(--text3);">Sin asignar</span>';
     const cineSafe = r.cine.replace(/'/g, "\\'");
     return `<tr>
       <td style="font-family:var(--ff);color:var(--gold);font-weight:600;">${r.id}</td>
@@ -437,11 +438,12 @@ function filtrarCines() {
       <td style="color:var(--cyan);">${r.serie}</td>
       <td>${r.tipo}</td>
       <td>${prioBadge(r.prioridad)}</td>
-      <td>${estadoBadge(r.estado)} ${resolucionBadge(r.tipo_resolucion)}</td>
+      <td>${estadoBadge(r.estado)}</td>
+      <td style="font-size:11px;">${tec}</td>
       <td style="color:var(--text2);font-size:11px;">${nu}</td>
       <td style="color:var(--text2);">${formatDate(r.created_at)}</td>
       <td style="display:flex;gap:5px;">
-        <button onclick="openModal('${r.id}')" style="background:var(--panel3);border:1px solid var(--border2);color:var(--text);padding:4px 10px;border-radius:5px;font-size:11px;cursor:pointer;">${txtBtn}</button>
+        <button onclick="openModal('${r.id}')" style="background:var(--panel3);border:1px solid var(--border2);color:var(--text);padding:4px 10px;border-radius:5px;font-size:11px;cursor:pointer;">Gestionar</button>
         ${canDel ? `<button onclick="deleteIncDirect('${r.id}','${cineSafe}','${r.estado}')" style="background:rgba(239,68,68,.1);border:1px solid rgba(239,68,68,.3);color:var(--red);padding:4px 8px;border-radius:5px;font-size:11px;cursor:pointer;" title="Eliminar">🗑</button>` : ''}
       </td>
     </tr>`;
@@ -480,32 +482,24 @@ async function openModal(id) {
   try {
     const r = await DB.getIncidencia(id);
     if (!r) { closeModal(); return; }
-    
+
     // Seguridad: cine solo ve las suyas
     if (currentUser.rol === 'cinepolis' && r.usuario_id !== currentUser.id) { closeModal(); return; }
-    // Seguridad: técnico solo ve las asignadas a él
+    // Seguridad: técnico solo ve las que tiene asignadas
     if (currentUser.rol === 'tecnico' && r.tecnico_id !== currentUser.id) { closeModal(); return; }
 
-    // Lista de técnicos para asignar (solo gerente/admin)
-    let _tecnicos = [];
-    if (['mantenimiento','admin'].includes(currentUser.rol)) {
-      try { _tecnicos = await DB.getTecnicos(); } catch(e) { _tecnicos = []; }
-    }
+    // Permisos
+    const esTecnicoAsignado = currentUser.rol === 'tecnico' && r.tecnico_id === currentUser.id;
+    const canAsignar   = ['admin','mantenimiento'].includes(currentUser.rol);
+    const canEditManto = (['mantenimiento','admin'].includes(currentUser.rol) || esTecnicoAsignado) && r.estado !== 'Cerrada';
+    const canConfirmCine = currentUser.rol === 'cinepolis' && r.estado === 'Resuelta';
+    const canDelete = currentUser.rol === 'admin';
 
-    // Venta de la máquina (solo gerente/admin) — para decidir reparar vs retirar
-    let ventaInfo = null;
-    if (['mantenimiento','admin'].includes(currentUser.rol) && typeof D !== 'undefined') {
-      const serie = r.serie;
-      let v = (D.venta_por_serie && D.venta_por_serie[serie]) ? D.venta_por_serie[serie] : null;
-      if (!v && Array.isArray(D.top_priority)) {
-        const m = D.top_priority.find(x => x.Serie === serie);
-        if (m) v = { avg_semanal: m.avg_semanal, TOTAL_VENTA: m.TOTAL_VENTA };
-      }
-      if (!v && Array.isArray(D.venta_alerta)) {
-        const m = D.venta_alerta.find(x => x.NUM_SERIE === serie);
-        if (m) v = { avg_semanal: m.avg_semanal, TOTAL_VENTA: m.TOTAL_VENTA };
-      }
-      ventaInfo = v;
+    // Cargar técnicos disponibles (solo si puede asignar)
+    let tecnicos = [];
+    if (canAsignar) {
+      try { tecnicos = await DB.getTecnicos(); window._tecnicosCache = tecnicos; }
+      catch(e) { console.warn('[openModal] getTecnicos falló:', e.message); tecnicos = []; }
     }
 
     // Traer el historial de esta incidencia
@@ -514,58 +508,46 @@ async function openModal(id) {
     const logsHtml = logs.length ? logs.map(l => `
       <div style="font-size:11px; padding:8px; border-left:2px solid var(--gold); margin-bottom:6px; background:var(--bg3); border-radius:0 6px 6px 0;">
         <span style="color:var(--text2); display:block; margin-bottom:2px;">${formatDate(l.created_at)}</span>
-        <span style="color:var(--cyan); font-weight:600;">${l.nombre_usuario}</span> cambió a <b style="color:var(--text);">${l.estado_nuevo}</b>
+        <span style="color:var(--cyan); font-weight:600;">${l.nombre_usuario}</span> ${l.accion==='asignacion' ? '' : 'cambió a'} <b style="color:var(--text);">${l.accion==='asignacion' ? '' : l.estado_nuevo}</b>
         ${l.nota ? `<div style="color:var(--text3); margin-top:4px; font-style:italic;">"${l.nota}"</div>` : ''}
       </div>
     `).join('') : '<div style="color:var(--text3); font-size:11px;">Sin historial de cambios.</div>';
 
-    const canEditManto = ['mantenimiento','admin','tecnico'].includes(currentUser.rol) && r.estado !== 'Cerrada';
-    const canAsignar   = ['mantenimiento','admin'].includes(currentUser.rol) && r.estado !== 'Cerrada';
-    const canConfirmCine = currentUser.rol === 'cinepolis' && r.estado === 'Resuelta';
-    const canDelete = currentUser.rol === 'admin';
     const nota      = r.nota_manto || '';
     const fotoUrl   = r.foto_url   || '';
     const fotoCierre = r.foto_url_cierre || '';
-    
-    const showDias = currentUser.rol !== 'cinepolis';
-    const _etapasR = etapasDe(r.tipo_resolucion);
-    const _keys    = _etapasR.map(e => e.key);
-    const estadoActual = _keys.includes(r.estado)
-      ? r.estado
-      : (r.estado === 'En proceso' ? 'En diagnóstico' : (_keys[0]));
-    const statusOpts = _etapasR
-      .map(e => `<option value="${e.key}" ${estadoActual===e.key?'selected':''}>${e.label}</option>`).join('');
+
+    const statusOpts = ['Abierta','En proceso','Resuelta']
+      .map(s => `<option value="${s}" ${r.estado===s?'selected':''}>${s}</option>`).join('');
+
+    const tecnicoOpts = '<option value="">— Sin asignar —</option>'
+      + tecnicos.map(t => `<option value="${t.id}" ${r.tecnico_id===t.id?'selected':''}>${t.nombre}${t.telefono?' · '+t.telefono:''}</option>`).join('');
 
     document.getElementById('modalContent').innerHTML = `
       <div class="detail-row"><span class="detail-key">ID</span><span class="detail-val" style="font-family:var(--ff);color:var(--gold);font-weight:700;">${r.id}</span></div>
       <div class="detail-row"><span class="detail-key">Cine</span><span class="detail-val">${r.cine}</span></div>
-      
+
       <div class="detail-row"><span class="detail-key">Máquina</span><span class="detail-val" style="color:var(--cyan);">${r.tipo || 'N/A'} (Serie: ${r.serie})</span></div>
       <div class="detail-row"><span class="detail-key">Tipo de Falla</span><span class="detail-val">${r.clasificacion_falla || 'N/A'}</span></div>
-      
+
       <div class="detail-row"><span class="detail-key">Prioridad</span><span class="detail-val">${prioBadge(r.prioridad)}</span></div>
       <div class="detail-row"><span class="detail-key">Estado Actual</span><span class="detail-val">${estadoBadge(r.estado)}</span></div>
-      <div id="slaBarBox" style="margin:6px 0 14px;">${slaProgressBar(r.estado, r.tipo_resolucion, showDias)}</div>
-      ${['mantenimiento','admin'].includes(currentUser.rol) ? (ventaInfo ? `
-        <div style="background:rgba(34,197,94,.06);border:1px solid rgba(34,197,94,.25);border-radius:8px;padding:12px 14px;margin:0 0 14px;display:flex;gap:18px;flex-wrap:wrap;align-items:center;">
-          <div>
-            <div style="font-size:10px;color:var(--text2);text-transform:uppercase;letter-spacing:.5px;">Venta prom. semanal</div>
-            <div style="font-family:var(--ff);font-size:22px;font-weight:700;color:var(--green);">$${Math.round(ventaInfo.avg_semanal||0).toLocaleString('es-MX')}</div>
-          </div>
-          <div>
-            <div style="font-size:10px;color:var(--text2);text-transform:uppercase;letter-spacing:.5px;">Venta acumulada</div>
-            <div style="font-family:var(--ff);font-size:18px;font-weight:600;color:var(--text);">$${Math.round(ventaInfo.TOTAL_VENTA||0).toLocaleString('es-MX')}</div>
-          </div>
-          <div style="font-size:11px;color:var(--text3);flex:1;min-width:150px;">💡 Si la máquina genera poca venta, conviene evaluar el <b>Retiro</b> en lugar de reparar.</div>
-        </div>` : `<div style="font-size:11px;color:var(--text3);margin:0 0 14px;">Sin datos de venta para esta serie (corre el sync para actualizarlos).</div>`) : ''}
+      <div class="detail-row"><span class="detail-key">Técnico Asignado</span><span class="detail-val" style="color:${r.tecnico_nombre?'var(--gold)':'var(--text3)'};">${r.tecnico_nombre ? '🔧 '+r.tecnico_nombre + (r.tecnico_telefono?' · '+r.tecnico_telefono:'') : 'Sin asignar'}</span></div>
       <div class="detail-row"><span class="detail-key">Reportado por</span><span class="detail-val" style="color:var(--cyan);">${r.nombre_usuario || r.usuario_id}</span></div>
-      ${r.tecnico_nombre ? `<div class="detail-row"><span class="detail-key">Técnico asignado</span><span class="detail-val" style="color:var(--gold);font-weight:600;">${r.tecnico_nombre}</span></div>` : ''}
       <div class="detail-row"><span class="detail-key">Fecha de Reporte</span><span class="detail-val">${formatDate(r.created_at)}</span></div>
       <div class="detail-row" style="flex-direction:column;gap:6px;"><span class="detail-key">Descripción</span><span class="detail-val" style="color:var(--text2);line-height:1.6;">${r.descripcion}</span></div>
-      
+
       ${fotoUrl ? `<div class="detail-row" style="margin-top:10px;"><span class="detail-key" style="color:var(--text2);">Evidencia Inicial</span><img src="${fotoUrl}" class="modal-photo" style="margin-top:4px;"></div>` : ''}
       ${fotoCierre ? `<div class="detail-row" style="margin-top:10px;flex-direction:column;gap:4px;"><span class="detail-key" style="color:var(--green);">Evidencia de Solución</span><a href="${fotoCierre}" target="_blank" style="color:var(--cyan);text-decoration:none;font-weight:bold;">📸 Ver foto de Mantenimiento</a></div>` : ''}
-      
+
+      ${canAsignar ? `
+        <div style="margin-top:16px;border:1px solid var(--border);padding:15px;border-radius:8px;background:var(--bg2);">
+          <div class="detail-key" style="margin-bottom:8px;color:var(--gold);">Asignar Técnico de Campo</div>
+          <select class="status-select" id="modalTecnico">${tecnicoOpts}</select>
+          <button class="save-status-btn" id="saveTecnicoBtn" onclick="asignarTecnico()" style="margin-top:10px;">Guardar Asignación</button>
+          ${tecnicos.length===0 ? '<div style="font-size:11px;color:var(--text3);margin-top:8px;">⚠️ No hay técnicos registrados. Créalos en la pestaña Usuarios con rol "Técnico de Campo".</div>' : ''}
+        </div>` : ''}
+
       <div style="margin-top:20px; border-top:1px solid var(--border); padding-top:16px;">
         <div class="detail-key" style="margin-bottom:10px;color:var(--text2);">Historial de Seguimiento</div>
         <div style="max-height:150px; overflow-y:auto; padding-right:5px;">${logsHtml}</div>
@@ -574,26 +556,9 @@ async function openModal(id) {
       ${canEditManto ? `
         <div style="margin-top:20px;border-top:1px solid var(--border);padding-top:16px;background:var(--bg2);padding:15px;border-radius:8px;">
           <div class="detail-key" style="margin-bottom:8px;color:var(--gold);">Actualizar Estado Operativo</div>
-          <select class="status-select" id="modalStatus" onchange="onEstadoModalChange()">
+          <select class="status-select" id="modalStatus" onchange="document.getElementById('cajaFoto').style.display = this.value==='Resuelta' ? 'block' : 'none'">
             ${statusOpts}
           </select>
-
-          <div id="cajaTipoRes" style="display:${estadoToEtapa(r.estado, r.tipo_resolucion)>=1?'block':'none'}; margin-top:12px;">
-            <label class="form-label" style="color:var(--gold);">Tipo de resolución</label>
-            <select class="status-select" id="modalTipoRes" onchange="onTipoResChange()">
-              <option value="">— Selecciona —</option>
-              <option value="Reparación" ${r.tipo_resolucion==='Reparación'?'selected':''}>🔧 Reparación</option>
-              <option value="Retiro"     ${r.tipo_resolucion==='Retiro'?'selected':''}>🔄 Retiro</option>
-            </select>
-          </div>
-
-          ${canAsignar ? `
-          <div class="detail-key" style="margin:14px 0 8px;color:var(--gold);">Asignar técnico</div>
-          <select class="status-select" id="modalTecnico">
-            <option value="">— Sin asignar —</option>
-            ${_tecnicos.map(t => `<option value="${t.id}" ${r.tecnico_id===t.id?'selected':''}>${t.nombre}</option>`).join('')}
-          </select>
-          ${_tecnicos.length ? '' : '<div style="font-size:11px;color:var(--text3);margin-top:6px;">Aún no hay técnicos. Créalos en la pestaña Usuarios.</div>'}` : ''}
 
           <div id="cajaFoto" style="display:${r.estado==='Resuelta'?'block':'none'}; margin-top:12px;">
             <label class="form-label" style="color:var(--gold);">📸 Subir Evidencia (Requerida para Resuelta)</label>
@@ -606,14 +571,14 @@ async function openModal(id) {
             ${canDelete ? `<button onclick="deleteInc('${r.id}','${r.estado}')" style="background:rgba(239,68,68,.12);border:1px solid rgba(239,68,68,.35);color:var(--red);padding:9px 16px;border-radius:6px;font-size:12px;cursor:pointer;">🗑 Eliminar</button>` : ''}
           </div>
         </div>` : ''}
-        
+
       ${canConfirmCine ? `
         <div style="margin-top:20px; border:1px solid var(--green); border-radius:8px; padding:15px; text-align:center; background:rgba(34,197,94,0.05);">
           <div style="font-size:12px; margin-bottom:12px; color:var(--text);">Mantenimiento ha reportado este equipo como <b>Resuelto</b>. Por favor, verifica el equipo.</div>
           <button onclick="confirmarCierre()" class="btn-primary" style="background:var(--green); width:100%; font-size:14px; padding:12px;">✅ Confirmar que funciona correctamente</button>
         </div>
       ` : ''}
-      
+
       ${r.estado === 'Cerrada' ? `<div style="margin-top:20px; color:var(--green); text-align:center; padding:15px; border:1px dashed var(--green); border-radius:8px; font-weight:bold;">✅ Ticket Cerrado y Confirmado</div>` : ''}
       `;
 
@@ -622,54 +587,53 @@ async function openModal(id) {
   }
 }
 
-function onEstadoModalChange() {
-  const v = document.getElementById('modalStatus').value;
-  const tipo = document.getElementById('modalTipoRes')?.value || '';
-  const etapa = (typeof estadoToEtapa === 'function') ? estadoToEtapa(v, tipo) : 0;
-  const caja = document.getElementById('cajaFoto');
-  if (caja) caja.style.display = (v === 'Resuelta') ? 'block' : 'none';
-  const cajaTR = document.getElementById('cajaTipoRes');
-  if (cajaTR) cajaTR.style.display = (etapa >= 1) ? 'block' : 'none';
-  refreshModalSLA();
-}
+/* ── Asignar técnico (solo admin y mantenimiento) ── */
+async function asignarTecnico() {
+  if (!requireRole('admin','mantenimiento')) return;
+  const btn = document.getElementById('saveTecnicoBtn');
+  const sel = document.getElementById('modalTecnico');
+  const tecnicoId = sel.value;
 
-// Al cambiar Reparación/Retiro: reconstruye las etapas del desplegable y la barra
-function onTipoResChange() {
-  rebuildEstadoOptions();
-  refreshModalSLA();
-}
+  btn.disabled = true; btn.textContent = 'Guardando...';
 
-function rebuildEstadoOptions() {
-  const sel = document.getElementById('modalStatus');
-  if (!sel || typeof etapasDe !== 'function') return;
-  const tipo   = document.getElementById('modalTipoRes')?.value || '';
-  const etapas = etapasDe(tipo);
-  const curVal = sel.value;
-  const curIdx = sel.selectedIndex >= 0 ? sel.selectedIndex : 0;
-  sel.innerHTML = etapas.map(e => `<option value="${e.key}">${e.label}</option>`).join('');
-  // Conservar el avance: por valor si existe, si no por la misma posición
-  const match = etapas.findIndex(e => e.key === curVal);
-  sel.selectedIndex = match >= 0 ? match : Math.min(curIdx, etapas.length - 1);
-}
+  try {
+    let cambios = { tecnico_id: '', tecnico_nombre: '', tecnico_telefono: '' };
+    let nombreTec = 'Sin asignar';
 
-function refreshModalSLA() {
-  const box = document.getElementById('slaBarBox');
-  if (!box || typeof slaProgressBar !== 'function') return;
-  const estado = document.getElementById('modalStatus')?.value;
-  const tipo   = document.getElementById('modalTipoRes')?.value || '';
-  const showDias = currentUser.rol !== 'cinepolis';
-  box.innerHTML = slaProgressBar(estado, tipo, showDias);
+    if (tecnicoId) {
+      const tecnicos = window._tecnicosCache || await DB.getTecnicos();
+      const t = tecnicos.find(x => x.id === tecnicoId);
+      if (t) {
+        cambios = { tecnico_id: t.id, tecnico_nombre: t.nombre, tecnico_telefono: t.telefono || '' };
+        nombreTec = t.nombre;
+      }
+    }
+
+    await DB.actualizarIncidencia(editingIncId, cambios);
+    await DB.escribirLog({ id: newId('log'), incidencia_id: editingIncId,
+      usuario_id: currentUser.id, nombre_usuario: currentUser.nombre,
+      accion: 'asignacion', estado_anterior: '', estado_nuevo: '',
+      nota: 'Técnico asignado: ' + nombreTec, created_at: nowISO() });
+
+    showToast('Técnico asignado ✓', 'success');
+    _todasIncs = _todasIncs.map(x => x.id === editingIncId ? { ...x, ...cambios } : x);
+    if (typeof filtrarCines === 'function' && document.getElementById('tbCinesLista')) filtrarCines();
+    updateBadge();
+    openModal(editingIncId); // refrescar el modal con la asignación aplicada
+  } catch(err) {
+    showToast('Error: ' + err.message, 'error');
+    btn.disabled = false; btn.textContent = 'Guardar Asignación';
+  }
 }
 
 async function saveStatus() {
-  if (!requireRole('mantenimiento','admin','tecnico')) return;   // ejecutivo/cine: solo lectura
   const btn = document.getElementById('saveStatusBtn');
   const estadoNuevo = document.getElementById('modalStatus').value;
   const nota        = document.getElementById('modalNota').value.trim();
   const fileInput   = document.getElementById('mFoto');
-  
+
   btn.disabled = true; btn.textContent = 'Verificando...';
-  
+
   try {
     const r = await DB.getIncidencia(editingIncId);
     let urlCierre = r.foto_url_cierre || '';
@@ -688,62 +652,27 @@ async function saveStatus() {
     }
 
     btn.textContent = 'Guardando...';
-
-    const cambios = { estado: estadoNuevo, nota_manto: nota, foto_url_cierre: urlCierre };
-
-    // Marca cuándo se puso "Resuelta" (para el auto-cierre por inactividad del cine)
-    if (estadoNuevo === 'Resuelta' && r.estado !== 'Resuelta') {
-      cambios.fecha_resuelta = nowISO();
-    }
-
-    // Tipo de resolución (Reparación / Retiro), si el selector está visible
-    const selTR = document.getElementById('modalTipoRes');
-    if (selTR) cambios.tipo_resolucion = selTR.value;
-
-    // ¿Cambió la asignación de técnico? (solo aparece el selector para gerente/admin)
-    const selTec = document.getElementById('modalTecnico');
-    let asignacionNueva = null;
-    if (selTec) {
-      const tid     = selTec.value;
-      const tnombre = tid ? selTec.options[selTec.selectedIndex].text : '';
-      if (tid !== (r.tecnico_id || '')) {
-        cambios.tecnico_id       = tid;
-        cambios.tecnico_nombre   = tnombre;
-        cambios.fecha_asignacion = tid ? nowISO() : null;
-        cambios.push_enviado     = tid ? 0 : null;   // 0 = el script le mandará el aviso
-        asignacionNueva = tnombre || '(sin asignar)';
-      }
-    }
-
-    await DB.actualizarIncidencia(editingIncId, cambios);
+    await DB.actualizarIncidencia(editingIncId, {
+      estado: estadoNuevo,
+      nota_manto: nota,
+      foto_url_cierre: urlCierre
+    });
 
     await DB.escribirLog({ id: newId('log'), incidencia_id: editingIncId,
       usuario_id: currentUser.id, nombre_usuario: currentUser.nombre,
       accion: 'cambio_estado', estado_anterior: r.estado, estado_nuevo: estadoNuevo,
       nota, created_at: nowISO() });
 
-    if (asignacionNueva !== null) {
-      await DB.escribirLog({ id: newId('log'), incidencia_id: editingIncId,
-        usuario_id: currentUser.id, nombre_usuario: currentUser.nombre,
-        accion: 'asignacion', estado_anterior: r.tecnico_nombre || '(sin asignar)',
-        estado_nuevo: asignacionNueva,
-        nota: `Asignada a ${asignacionNueva} por ${currentUser.nombre}`, created_at: nowISO() });
-    }
-
     showToast('Incidencia actualizada', 'success');
 
     // Actualizar caché y vistas
-    const extra = (cambios.tecnico_id !== undefined)
-      ? { tecnico_id: cambios.tecnico_id, tecnico_nombre: cambios.tecnico_nombre, fecha_asignacion: cambios.fecha_asignacion }
-      : {};
-    if (cambios.tipo_resolucion !== undefined) extra.tipo_resolucion = cambios.tipo_resolucion;
-    _todasIncs = _todasIncs.map(x => x.id === editingIncId ? {...x, estado: estadoNuevo, nota_manto: nota, foto_url_cierre: urlCierre, ...extra} : x);
-    if(typeof filtrarCines === 'function' && document.getElementById('tbCinesLista')) filtrarCines();
-    if(typeof recargarMisAsignadas === 'function' && document.getElementById('tbMisAsignadas')) recargarMisAsignadas();
+    _todasIncs = _todasIncs.map(x => x.id === editingIncId ? {...x, estado: estadoNuevo, nota_manto: nota, foto_url_cierre: urlCierre} : x);
+    if (typeof filtrarCines === 'function' && document.getElementById('tbCinesLista')) filtrarCines();
+    if (typeof filtrarMisAsign === 'function' && document.getElementById('tbMisAsign')) filtrarMisAsign();
     closeModal();
     updateBadge();
-  } catch(err) { 
-    showToast('Error: ' + err.message, 'error'); 
+  } catch(err) {
+    showToast('Error: ' + err.message, 'error');
     btn.disabled = false; btn.textContent = 'Guardar Cambios';
   }
 }
@@ -754,7 +683,7 @@ async function confirmarCierre() {
   try {
     const r = await DB.getIncidencia(editingIncId);
     await DB.actualizarIncidencia(editingIncId, { estado: 'Cerrada' });
-    
+
     await DB.escribirLog({ id: newId('log'), incidencia_id: editingIncId,
       usuario_id: currentUser.id, nombre_usuario: currentUser.nombre,
       accion: 'cambio_estado', estado_anterior: r.estado, estado_nuevo: 'Cerrada',
@@ -762,11 +691,11 @@ async function confirmarCierre() {
 
     showToast('Ticket cerrado exitosamente ✓', 'success');
     _todasIncs = _todasIncs.map(x => x.id === editingIncId ? {...x, estado: 'Cerrada'} : x);
-    
+
     // Refrescar vistas locales dependiendo del archivo donde estés
     if(typeof filtrarCines === 'function') filtrarCines();
     else if (typeof refreshLista === 'function') refreshLista();
-    
+
     closeModal();
     updateBadge();
   } catch(err) {
@@ -785,7 +714,7 @@ async function deleteInc(id, estado) {
       nota: 'Eliminada por admin', created_at: nowISO() });
     showToast('Incidencia eliminada', 'success');
     _todasIncs = _todasIncs.filter(x => x.id !== id);
-    closeModal(); 
+    closeModal();
     if(typeof filtrarCines === 'function') filtrarCines();
     updateBadge();
   } catch(err) { showToast('Error: ' + err.message, 'error'); }
