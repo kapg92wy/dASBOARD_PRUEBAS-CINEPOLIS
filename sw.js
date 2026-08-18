@@ -7,7 +7,7 @@
    frescos desde la red.
    ═══════════════════════════════════════════════ */
 
-const CACHE = 'centro-servicio-v4';
+const CACHE = 'centro-servicio-v5';
 
 const SHELL = [
   './',
