@@ -20,11 +20,11 @@ async function initApp() {
   badge.className   = 'hbadge ' + (rolMap[currentUser.rol] || 'bw');
   document.getElementById('userLabel').textContent = currentUser.nombre;
 
-  if (['admin','mantenimiento','ejecutivo'].includes(currentUser.rol)) {
+  if (['admin','mantenimiento'].includes(currentUser.rol)) {
     document.getElementById('liveBadge').style.display = 'flex';
     document.getElementById('fechaBadge').style.display = 'block';
-    document.getElementById('headerTitle').textContent = 'DASHBOARD OPERATIVO';
-    document.getElementById('headerSub').textContent   = 'Cinépolis · Gestión de Máquinas y Servicios';
+    document.getElementById('headerTitle').textContent = 'CENTRO DE SERVICIO GALEX';
+    document.getElementById('headerSub').textContent   = 'Gestión de máquinas · Cinépolis';
     await cargarDashboardSnapshot();
     const fb = document.getElementById('fechaBadge');
     if (fb) fb.textContent = D.fecha_actualizacion || '—';
@@ -42,14 +42,20 @@ async function initApp() {
     }, REFRESH_INTERVAL_MS);
   }
 
+  if (currentUser.rol === 'ejecutivo') {
+    document.getElementById('liveBadge').style.display = 'flex';
+    document.getElementById('headerTitle').textContent = 'CENTRO DE SERVICIO GALEX';
+    document.getElementById('headerSub').textContent   = 'Gestión de máquinas · Cinépolis';
+  }
+
   buildNav();
 
   const firstTab = currentUser.rol === 'cinepolis'
     ? 'inicio'
-    : currentUser.rol === 'mantenimiento'
-      ? 'incidencias_cines'
-      : currentUser.rol === 'tecnico'
-        ? 'mis_asignaciones'
+    : currentUser.rol === 'tecnico'
+      ? 'mis_asignadas'
+      : ['mantenimiento','ejecutivo'].includes(currentUser.rol)
+        ? 'incidencias_cines'
         : 'dashboard';
   renderTab(firstTab);
 
@@ -63,10 +69,8 @@ async function initApp() {
           filtrarCines();
         }).catch(()=>{});
       }
-      const tbM = document.getElementById('tbMisAsign');
-      if (tbM && typeof recargarMisAsignaciones === 'function') {
-        recargarMisAsignaciones();
-      }
+      const tbA = document.getElementById('tbMisAsignadas');
+      if (tbA && typeof recargarMisAsignadas === 'function') recargarMisAsignadas();
     });
   }
 
@@ -86,7 +90,7 @@ function buildNav() {
     ];
   } else if (rol === 'tecnico') {
     tabs = [
-      { id:'mis_asignaciones', label:'🔧 Mis Asignaciones', badge:true },
+      { id:'mis_asignadas', label:'🔧 Mis Asignadas', badge:true },
     ];
   } else if (rol === 'mantenimiento') {
     tabs = [
@@ -97,12 +101,9 @@ function buildNav() {
       { id:'dashboard_venta',      label:'📈 Alerta Venta' },
     ];
   } else if (rol === 'ejecutivo') {
+    // Observador: solo consulta las incidencias que reportan los cines
     tabs = [
-      { id:'dashboard',            label:'📊 Resumen General' },
-      { id:'incidencias_cines',    label:'📩 Incidencias Cines', badge:true },
-      { id:'dashboard_incidencias',label:'🔧 Incidencias BD' },
-      { id:'dashboard_prioridad',  label:'⚡ Por Prioridad' },
-      { id:'dashboard_venta',      label:'📈 Alerta Venta' },
+      { id:'incidencias_cines',    label:'📩 Incidencias de Cines', badge:true },
     ];
   } else { // admin
     tabs = [
@@ -147,10 +148,10 @@ function renderTab(tab) {
     case 'inicio':               renderInicio(div);               break;
     case 'nueva':                renderNueva(div);                break;
     case 'lista':                renderLista(div);                break;
+    case 'mis_asignadas':        renderMisAsignadas(div);         break;
     case 'usuarios':             renderUsuarios(div);             break;
     case 'log':                  renderLog(div);                  break;
     case 'incidencias_cines':    renderIncidenciasCines(div);     break;
-    case 'mis_asignaciones':     renderMisAsignaciones(div);      break;
     case 'dashboard':
     case 'dashboard_resumen':    renderDashboard(div);            break;
     case 'dashboard_incidencias':renderDashboardIncidencias(div); break;
@@ -171,6 +172,9 @@ function setupEventListeners() {
   document.getElementById('loginUser').addEventListener('keydown', e => { if(e.key==='Enter') doLogin(); });
   document.getElementById('loginBtn').onclick  = doLogin;
   document.getElementById('logoutBtn').onclick = doLogout;
+  document.getElementById('passBtn').onclick   = openPassModal;
+  document.getElementById('modalPassBg').addEventListener('click', closePassModal);
+  document.getElementById('passModalCloseBtn').addEventListener('click', () => closePassModal());
   document.getElementById('modalBg').addEventListener('click', closeModal);
   document.getElementById('modalCloseBtn').addEventListener('click', () => closeModal());
   document.getElementById('modalUserBg').addEventListener('click', closeUserModal);
